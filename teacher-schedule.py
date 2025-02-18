@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 import random
+from tkinter import messagebox
 
 classes = [f"CC{i}" for i in range(1, 9)]
 days_of_week = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
@@ -10,6 +11,7 @@ time_slots = [
     "20:45 - 22:00"   # 2ª aula
 ]
 
+# Dados dos professores
 teachers = {
     "Lidiana": ["Segunda", "Terça", "Sexta"],
     "Diogo": ["Segunda"],
@@ -33,6 +35,7 @@ teachers = {
 teacher_limits = {"Allan": 3, "Elio": 1}
 teacher_allocations = {teacher: set() for teacher in teachers}
 
+# Função para gerar o horário
 def generate_timetable():
     timetable = {cls: {day: {time_slot: None for time_slot in time_slots} for day in days_of_week} for cls in classes}
     
@@ -61,36 +64,27 @@ def generate_timetable():
 
 def display_timetable_gui(timetables):
     root = tk.Tk()
-    root.title("Solução 1")
-
-    canvas = tk.Canvas(root)
-    canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    scrollbar = tk.Scrollbar(root, orient="vertical", command=canvas.yview)
-    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-    canvas.configure(yscrollcommand=scrollbar.set)
-
-    timetable_frame = tk.Frame(canvas)
-    canvas.create_window((0, 0), window=timetable_frame, anchor="nw")
+    root.title("Grade de Aulas")
+    root.geometry("1200x600")
+    root.config(bg="#f5f5f5")
 
     def create_class_table(class_name, timetable_class):
-        frame = tk.Frame(timetable_frame)
-        frame.pack(padx=10, pady=10, anchor="w")
+        frame = tk.Frame(timetable_frame, bg="#ffffff", relief="solid", borderwidth=1)
+        frame.pack(padx=10, pady=10, fill="x", expand=True)
         
-        label = tk.Label(frame, text=f"Grade para {class_name}", font=("Arial", 14))
-        label.grid(row=0, column=0, columnspan=len(days_of_week) + 1)
+        label = tk.Label(frame, text=f"Grade para {class_name}", font=("Arial", 14, "bold"), bg="#e0e0e0")
+        label.grid(row=0, column=0, columnspan=len(days_of_week) + 1, pady=5)
 
         for i, day in enumerate(days_of_week):
-            label = tk.Label(frame, text=day, font=("Arial", 12))
+            label = tk.Label(frame, text=day, font=("Arial", 12, "bold"), bg="#e0e0e0")
             label.grid(row=1, column=i+1, padx=5, pady=5)
-        
+
         for row, time_slot in enumerate(time_slots, start=2):
-            label = tk.Label(frame, text=time_slot, font=("Arial", 12))
+            label = tk.Label(frame, text=time_slot, font=("Arial", 12), bg="#e0e0e0")
             label.grid(row=row, column=0, padx=5, pady=5)
             for col, day in enumerate(days_of_week, start=1):
                 teacher = timetable_class[day].get(time_slot, None)
-                teacher_label = tk.Label(frame, text=teacher, font=("Arial", 10))
+                teacher_label = tk.Label(frame, text=teacher, font=("Arial", 10), bg="#ffffff")
                 teacher_label.grid(row=row, column=col, padx=5, pady=5)
 
     def update_timetable(timetable, solution_number):
@@ -108,14 +102,25 @@ def display_timetable_gui(timetables):
     solution_number = 0
     total_solutions = 5
     timetables = [generate_timetable() for _ in range(total_solutions)]
-    
+
     def show_next_solution():
         nonlocal solution_number
         solution_number = (solution_number + 1) % total_solutions
         update_timetable(timetables[solution_number], solution_number + 1)
 
-    next_button = tk.Button(root, text="Próxima Solução", command=show_next_solution)
-    next_button.pack(pady=10)
+    canvas = tk.Canvas(root, bg="#f5f5f5")
+    canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+    scrollbar = tk.Scrollbar(root, orient="vertical", command=canvas.yview)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    timetable_frame = tk.Frame(canvas, bg="#f5f5f5")
+    canvas.create_window((0, 0), window=timetable_frame, anchor="nw")
+
+    next_button = tk.Button(root, text="Próxima Solução", command=show_next_solution, font=("Arial", 12), relief="raised", bg="#4CAF50", fg="white", padx=20, pady=10)
+    next_button.pack(pady=20)
 
     update_timetable(timetables[solution_number], solution_number + 1)
 
