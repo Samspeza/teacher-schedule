@@ -1,6 +1,6 @@
 from models import insert_teacher, insert_availability, insert_class, insert_time_slot, get_teachers
 
-classes = [f"CC{i}" for i in range(1, 9)]
+classes = [f"CC{i}" for i in range(1, 9)] + [f"ADS{i}" for i in range(1, 5)]
 days_of_week = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
 
 time_slots = [
