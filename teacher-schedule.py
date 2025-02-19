@@ -2,36 +2,17 @@ import tkinter as tk
 from tkinter import ttk
 import random
 import sqlite3
-from style import style_tkinter_widgets  
+from style import *
+from DbContext.models import get_teachers, update_teacher_availability, get_teacher_availability
+from config import teachers, teacher_limits, classes, days_of_week, time_slots
+from DbContext.database import DB_NAME
 
 def get_teachers_from_db():
-    conn = sqlite3.connect("schedule.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT name FROM teachers")
-    teachers = {row[0]: [] for row in cursor.fetchall()}
-
-    cursor.execute("SELECT teacher_id, day FROM teacher_availability")
-    for teacher_id, day in cursor.fetchall():
-        teacher_name = get_teacher_name_by_id(teacher_id, conn)
-        if teacher_name in teachers:
-            teachers[teacher_name].append(day)
-
-    conn.close()
-    return teachers
-
-def get_teacher_name_by_id(teacher_id, conn):
-    cursor = conn.cursor()
-    cursor.execute("SELECT name FROM teachers WHERE id = ?", (teacher_id,))
-    result = cursor.fetchone()
-    return result[0] if result else None
+    return list(teachers.keys())
 
 teachers = get_teachers_from_db()
-teacher_limits = {"Allan": 3, "Elio": 1}
-teacher_allocations = {teacher: set() for teacher in teachers}
 
-classes = [f"CC{i}" for i in range(1, 9)] + [f"ADS{i}" for i in range(1, 5)]
-days_of_week = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
-time_slots = ["19:10 - 20:25", "20:25 - 20:45", "20:45 - 22:00"]
+teacher_allocations = {teacher: set() for teacher in teachers}
 
 def generate_timetable():
     timetable = {cls: {day: {time_slot: None for time_slot in time_slots} for day in days_of_week} for cls in classes}
@@ -40,11 +21,10 @@ def generate_timetable():
         for day in days_of_week:
             previous_teacher = None
             for i, time_slot in enumerate(time_slots):
-                available_teachers = [teacher for teacher, availability in teachers.items()
-                                      if day in availability
-                                      and (teacher not in teacher_limits or len(teacher_allocations[teacher]) < teacher_limits[teacher])]
+                available_teachers = [teacher for teacher in teachers
+                                      if teacher not in teacher_limits or len(teacher_allocations[teacher]) < teacher_limits.get(teacher, float('inf'))]
 
-                if time_slot == "20:25 - 20:45":  # Intervalo
+                if time_slot == "20:25 - 20:45": 
                     teacher = "INTERVALO"
                 elif not available_teachers:
                     teacher = "[SEM PROFESSOR]"
@@ -59,73 +39,108 @@ def generate_timetable():
                 previous_teacher = teacher
     return timetable
 
+def update_teacher_in_db(name, day, time_slot, new_teacher):
+    conn = sqlite3.connect("schedule.db")
+    teacher_id = None
+    for teacher in get_teachers():  
+        if teacher[1] == new_teacher:  
+            teacher_id = teacher[0]
+            break
+
+    if teacher_id:
+        update_teacher_availability(teacher_id, day, new_teacher)  
+
+    conn.close()
+
 def display_timetable_gui(timetables):
     root = tk.Tk()
     root.title("Grade de Aulas")
-    root.config(bg="#F4F6F9")
-    style_frame, style_label = style_tkinter_widgets(root)  
+    root.config(bg=BACKGROUND_COLOR)
+    
+    canvas = tk.Canvas(root, bg=BACKGROUND_COLOR)
+    canvas.pack(side="left", fill="both", expand=True)
 
-    def create_class_table(class_name, timetable_class):
-        frame = tk.Frame(timetable_frame, bg="#ffffff", relief="flat", borderwidth=0)
-        style_frame(frame)
+    scrollbar = tk.Scrollbar(root, orient="vertical", command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
+
+    canvas.config(yscrollcommand=scrollbar.set)
+
+    timetable_frame = tk.Frame(canvas, bg=BACKGROUND_COLOR)
+    canvas.create_window((0, 0), window=timetable_frame, anchor="nw")
+
+    def create_class_table(name, timetable_class):
+        frame = tk.Frame(timetable_frame, bg=WHITE_COLOR, relief="flat", borderwidth=0)
         frame.pack(padx=20, pady=20, fill="x", expand=True)
 
-        label = tk.Label(frame, text=f"Grade para {class_name}", font=("Arial", 18, "bold"), bg="#00796B", fg="white")
-        style_label(label, font_size=18, font_weight="bold", bg_color="#00796B", fg_color="white")  
+        label = tk.Label(frame, text=f"Grade para {name}", font=HEADER_FONT, bg=BUTTON_COLOR, fg=BUTTON_TEXT_COLOR)
         label.grid(row=0, column=0, columnspan=len(days_of_week) + 1, pady=10)
 
         for i, day in enumerate(days_of_week):
-            label = tk.Label(frame, text=day, font=("Arial", 12, "bold"), bg="#00796B", fg="white")
-            style_label(label, font_size=12, font_weight="bold", bg_color="#00796B", fg_color="white")  
+            label = tk.Label(frame, text=day, font=LABEL_FONT, bg=BUTTON_COLOR, fg=BUTTON_TEXT_COLOR)
             label.grid(row=1, column=i+1, padx=10, pady=10)
 
         for row, time_slot in enumerate(time_slots, start=2):
-            label = tk.Label(frame, text=time_slot, font=("Arial", 12), bg="#B2DFDB", fg="black")
-            style_label(label, font_size=12, bg_color="#B2DFDB", fg_color="black")  
+            label = tk.Label(frame, text=time_slot, font=TIME_SLOT_FONT, bg=LABEL_COLOR, fg=TEXT_COLOR)
             label.grid(row=row, column=0, padx=15, pady=5)
+
             for col, day in enumerate(days_of_week, start=1):
                 teacher = timetable_class[day].get(time_slot, None)
-                teacher_label = tk.Label(frame, text=teacher, font=("Arial", 10), bg="#FFFFFF", fg="black")
-                style_label(teacher_label, font_size=10, bg_color="#FFFFFF", fg_color="black")  
+                teacher_label = tk.Label(frame, text=teacher, font=TEACHER_FONT, bg=WHITE_COLOR, fg=TEXT_COLOR)
                 teacher_label.grid(row=row, column=col, padx=10, pady=5)
 
-    def update_timetable(timetable, solution_number):
+                edit_button = tk.Button(frame, text="Editar", command=lambda cls=name, d=day, ts=time_slot, teacher=teacher, label=teacher_label: edit_teacher(cls, d, ts, teacher, label))
+                edit_button.grid(row=row, column=col+1, padx=5)
+
+    def edit_teacher(name, day, time_slot, teacher, teacher_label):
+        edit_window = tk.Toplevel(root)
+        edit_window.title(f"Editar Professor - {name} - {day} - {time_slot}")
+
+        label = tk.Label(edit_window, text="Selecione um novo professor:")
+        label.pack(pady=10)
+
+        teacher_select = ttk.Combobox(edit_window, values=teachers)
+        teacher_select.set(teacher)  
+        teacher_select.pack(pady=10)
+
+        def save_changes():
+            new_teacher = teacher_select.get()
+            if new_teacher and new_teacher != teacher:
+
+                update_teacher_in_db(name, day, time_slot, new_teacher)
+                edit_window.destroy()
+
+                teacher_label.config(text=new_teacher)
+
+        save_button = tk.Button(edit_window, text="Salvar", command=save_changes)
+        save_button.pack(pady=20)
+
+    def generate_and_update_timetable():
+        timetables = generate_timetable()
+        update_timetable(timetables)  
+
+    def update_timetable(timetable):
         for widget in timetable_frame.winfo_children():
             widget.destroy()
 
-        root.title(f"Solução {solution_number}")
-
-        for class_name, timetable_class in timetable.items():
-            create_class_table(class_name, timetable_class)
+        for name, timetable_class in timetable.items():
+            create_class_table(name, timetable_class)
 
         timetable_frame.update_idletasks()
         canvas.config(scrollregion=canvas.bbox("all"))
 
+    timetables = [generate_timetable() for _ in range(5)]
     solution_number = 0
-    total_solutions = 5
-    timetables = [generate_timetable() for _ in range(total_solutions)]
 
     def show_next_solution():
         nonlocal solution_number
-        solution_number = (solution_number + 1) % total_solutions
-        update_timetable(timetables[solution_number], solution_number + 1)
+        solution_number = (solution_number + 1) % 5
+        update_timetable(timetables[solution_number])
 
-    canvas = tk.Canvas(root, bg="#F4F6F9", bd=0)
-    canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    scrollbar = tk.Scrollbar(root, orient="vertical", command=canvas.yview)
-    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-    canvas.configure(yscrollcommand=scrollbar.set)
-
-    timetable_frame = tk.Frame(canvas, bg="#F4F6F9")
-    canvas.create_window((0, 0), window=timetable_frame, anchor="nw")
-
-    next_button = tk.Button(root, text="Próxima Solução", command=show_next_solution, font=("Arial", 14), relief="raised", bg="#00796B", fg="white", padx=15, pady=10)
-    style_label(next_button, font_size=14, bg_color="#00796B", fg_color="white") 
+    next_button = tk.Button(root, text="Próxima Solução", command=show_next_solution)
     next_button.pack(pady=20)
 
-    update_timetable(timetables[0], 1)
+    update_timetable(timetables[0])
     root.mainloop()
 
 display_timetable_gui(generate_timetable())
+
