@@ -1,7 +1,3 @@
-Claro! Vou combinar os dois READMEs de forma fluida, mantendo as informações e as funcionalidades de ambos. Aqui está o README unificado:
-
----
-
 # Sistema de Alocação de Professores e Grade de Aulas
 
 Este projeto é um sistema para alocar automaticamente professores em turmas de cursos, gerando uma grade de aulas com base nas disponibilidades dos professores e nas limitações de dias de trabalho. A grade é exibida por meio de uma interface gráfica construída com Tkinter. O sistema utiliza um banco de dados SQLite para armazenar as informações de professores, turmas, horários e suas respectivas alocações.
