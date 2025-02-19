@@ -1,52 +1,50 @@
 import tkinter as tk
 from tkinter import ttk
 import random
-from tkinter import messagebox
+import sqlite3
 
-classes = [f"CC{i}" for i in range(1, 9)]
-days_of_week = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
-time_slots = [
-    "19:10 - 20:25",  # 1ª aula
-    "20:25 - 20:45",  # Intervalo
-    "20:45 - 22:00"   # 2ª aula
-]
+def get_teachers_from_db():
+    conn = sqlite3.connect("schedule.db")  
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM teachers")
+    teachers = {row[0]: [] for row in cursor.fetchall()}  
 
-# Dados dos professores
-teachers = {
-    "Lidiana": ["Segunda", "Terça", "Sexta"],
-    "Diogo": ["Segunda"],
-    "Flávio": ["Terça", "Quarta"],
-    "André": ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"],
-    "Jucilene": ["Quarta"],
-    "Joao Otávio": ["Segunda", "Terça", "Quarta", "Quinta"],
-    "Allan": ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"],  # Apenas 3 dias
-    "Valter": ["Terça", "Quarta"],
-    "Fábio": ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"],
-    "Cícero": ["Segunda", "Terça", "Quarta"],
-    "Elio": ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"],  # Apenas 1 dia
-    "Evandro": ["Quinta"],
-    "Taisa": ["Segunda", "Quarta", "Quinta"],
-    "Rogerio": ["Segunda", "Terça", "Quarta", "Quinta"],
-    "Franco": ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"],
-    "Joao Marcelo": ["Segunda", "Terça", "Sexta"],
-    "Janayna": ["Segunda"]
-}
+    cursor.execute("SELECT teacher_id, day FROM teacher_availability")  
+    for teacher_id, day in cursor.fetchall():
+        teacher_name = get_teacher_name_by_id(teacher_id, conn)  
+        if teacher_name in teachers:
+            teachers[teacher_name].append(day)
 
-teacher_limits = {"Allan": 3, "Elio": 1}
+    conn.close()
+    return teachers
+
+def get_teacher_name_by_id(teacher_id, conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM teachers WHERE id = ?", (teacher_id,))
+    result = cursor.fetchone()
+    return result[0] if result else None
+
+
+teachers = get_teachers_from_db()
+teacher_limits = {"Allan": 3, "Elio": 1}  
 teacher_allocations = {teacher: set() for teacher in teachers}
 
-# Função para gerar o horário
+# Turmas de CC e ADS
+classes = [f"CC{i}" for i in range(1, 9)] + [f"ADS{i}" for i in range(1, 5)]
+days_of_week = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
+time_slots = ["19:10 - 20:25", "20:25 - 20:45", "20:45 - 22:00"]
+
 def generate_timetable():
     timetable = {cls: {day: {time_slot: None for time_slot in time_slots} for day in days_of_week} for cls in classes}
-    
+
     for cls in classes:
         for day in days_of_week:
             previous_teacher = None
             for i, time_slot in enumerate(time_slots):
-                available_teachers = [teacher for teacher, availability in teachers.items() 
+                available_teachers = [teacher for teacher, availability in teachers.items()
                                       if day in availability 
                                       and (teacher not in teacher_limits or len(teacher_allocations[teacher]) < teacher_limits[teacher])]
-                
+
                 if time_slot == "20:25 - 20:45":  # Intervalo
                     teacher = "INTERVALO"
                 elif not available_teachers:
@@ -57,7 +55,7 @@ def generate_timetable():
                     else:
                         teacher = random.choice([t for t in available_teachers if t != previous_teacher] or available_teachers)
                         teacher_allocations[teacher].add(day)
-                
+
                 timetable[cls][day][time_slot] = teacher
                 previous_teacher = teacher
     return timetable
@@ -119,12 +117,10 @@ def display_timetable_gui(timetables):
     timetable_frame = tk.Frame(canvas, bg="#f5f5f5")
     canvas.create_window((0, 0), window=timetable_frame, anchor="nw")
 
-    next_button = tk.Button(root, text="Próxima Solução", command=show_next_solution, font=("Arial", 12), relief="raised", bg="#4CAF50", fg="white", padx=20, pady=10)
-    next_button.pack(pady=20)
+    next_button = tk.Button(root, text="Próxima Solução", command=show_next_solution, font=("Arial", 12), relief="raised", bg="#4CAF50", fg="white", padx=10, pady=5)
+    next_button.pack(pady=10)
 
-    update_timetable(timetables[solution_number], solution_number + 1)
-
+    update_timetable(timetables[0], 1)
     root.mainloop()
 
-if __name__ == "__main__":
-    display_timetable_gui(None)
+display_timetable_gui(generate_timetable())
