@@ -10,7 +10,7 @@ class TimetableApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Gerenciamento de Grade de Aulas")
-        self.root.geometry("800x600")
+        self.root.geometry("650x600")
         self.root.config(bg=BACKGROUND_COLOR)
         self.selected_cell = None
         self.teacher_allocations = {teacher: set() for teacher in teachers}
