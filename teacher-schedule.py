@@ -24,8 +24,8 @@ class TimetableApp:
         self.button_frame = tk.Frame(self.root, bg=BACKGROUND_COLOR)
         self.button_frame.pack(pady=10)
         
-        self.save_icon = PhotoImage(file=r"icons\salvar.png").subsample(20, 20)  
-        self.cancel_icon = PhotoImage(file=r"icons\cancel.png").subsample(20, 20)  
+        self.save_icon = PhotoImage(file="icons/salvar.png").subsample(20, 20)  
+        self.cancel_icon = PhotoImage(file="icons/cancel.png").subsample(20, 20)  
         
         self.list_icon = PhotoImage(file="icons/list.png").subsample(20, 20)  
         self.edit_icon = PhotoImage(file="icons/edit.png").subsample(20, 20)  
