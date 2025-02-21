@@ -1,3 +1,4 @@
+from os import name
 import sqlite3
 import tkinter as tk
 from tkinter import ttk
@@ -9,13 +10,13 @@ from tkinter.messagebox import askyesno
 from DbContext.database import DB_NAME
 from style import *
 from config import teachers, teacher_limits, classes, days_of_week, time_slots
-
+from ScreenManager import ScreenManager
 
 class TimetableApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Gerenciamento de Grade de Aulas")
-        self.root.geometry("700x600")
+        self.root.geometry("900x800")
         self.root.config(bg=BACKGROUND_COLOR)
         self.selected_cell = None
         self.teacher_allocations = {teacher: set() for teacher in teachers}
@@ -23,43 +24,154 @@ class TimetableApp:
         self.setup_ui()
 
     def setup_ui(self):
-        title_label = tk.Label(self.root, text="Gerenciamento de Grade de Aulas", font=HEADER_FONT, bg=HEADER_COLOR, fg=TEXT_COLOR)
-        title_label.pack(pady=10)
+        # Faixa lateral azul com largura aumentada
+        self.sidebar_frame = tk.Frame(self.root, bg="#2A72C3", width=200)
+        self.sidebar_frame.pack(side="left", fill="y")
+        self.sidebar_frame.pack_propagate(False)
 
-        self.button_frame = tk.Frame(self.root, bg=BACKGROUND_COLOR)
-        self.button_frame.pack(pady=10)
+        # Botão com ícone de chapéu para voltar à tela principal
+        self.graduation_button = tk.Button(
+            self.sidebar_frame,
+            text="🎓",
+            command=self.show_home_screen,
+            font=("Arial", 80),
+            fg="white",
+            bg="#2A72C3",
+            borderwidth=0,
+            relief="flat",
+            highlightthickness=0
+        )
+        self.graduation_button.pack(pady=10)
 
-        self.save_icon = PhotoImage(file="icons/salvar.png").subsample(20, 20)  
-        self.cancel_icon = PhotoImage(file="icons/cancel.png").subsample(20, 20)  
+        # Área principal
+        self.main_frame = tk.Frame(self.root, bg=BACKGROUND_COLOR)
+        self.main_frame.pack(side="right", fill="both", expand=True)
 
-        self.list_icon = PhotoImage(file="icons/list.png").subsample(20, 20)  
-        self.edit_icon = PhotoImage(file="icons/edit.png").subsample(20, 20)  
-        self.delete_icon = PhotoImage(file="icons/delete.png").subsample(20, 20) 
-        self.create_icon = PhotoImage(file="icons/mais.png").subsample(20, 20)  
-        self.download_icon = PhotoImage(file="icons/download.png").subsample(20, 20)  
+        # Cabeçalho com o título (área cinza)
+        self.header_frame = tk.Frame(self.main_frame, bg="#F8F8F8")
+        self.header_frame.pack(pady=20, fill="x", padx=10)
 
-        self.create_button = tk.Button(self.button_frame, image=self.create_icon, command=self.create_manual_schedule, padx=8, pady=4)
+        title_label = tk.Label(
+            self.header_frame,
+            text="Criar Grade",
+            font=("Arial", 16, "bold"),
+            bg="#F8F8F8",
+            fg="#2A72C3",
+            cursor="hand2",
+            anchor="w"
+        )
+        title_label.pack(fill="x", padx=10)
+
+        # Frame para os botões de ação (fora do cabeçalho, dentro da área principal)
+        self.action_frame = tk.Frame(self.main_frame, bg=BACKGROUND_COLOR)
+        self.action_frame.pack(pady=10, padx=10, fill="x")
+
+        # Carregamento dos ícones dos botões
+        self.save_icon = PhotoImage(file="icons/salvar.png").subsample(20, 20)
+        self.cancel_icon = PhotoImage(file="icons/cancel.png").subsample(20, 20)
+        self.list_icon = PhotoImage(file="icons/list.png").subsample(20, 20)
+        self.edit_icon = PhotoImage(file="icons/edit.png").subsample(20, 20)
+        self.delete_icon = PhotoImage(file="icons/delete.png").subsample(20, 20)
+        self.create_icon = PhotoImage(file="icons/mais.png").subsample(20, 20)
+        self.download_icon = PhotoImage(file="icons/download.png").subsample(20, 20)
+
+        # Botões de ação dentro do frame action_frame, sem borda e sem fundo extra
+        self.create_button = tk.Button(
+            self.action_frame,
+            image=self.create_icon,
+            command=self.create_manual_schedule,
+            padx=8,
+            pady=4,
+            borderwidth=0,
+            relief="flat",
+            highlightthickness=0,
+            activebackground=BACKGROUND_COLOR
+        )
         self.create_button.pack(side="left", padx=8)
 
-        self.list_button = tk.Button(self.button_frame, image=self.list_icon, command=self.show_timetable, padx=8, pady=4)
+        self.list_button = tk.Button(
+            self.action_frame,
+            image=self.list_icon,
+            command=self.show_timetable,
+            padx=8,
+            pady=4,
+            borderwidth=0,
+            relief="flat",
+            highlightthickness=0,
+            activebackground=BACKGROUND_COLOR
+        )
         self.list_button.pack(side="left", padx=8)
 
-        self.edit_button = tk.Button(self.button_frame, image=self.edit_icon, command=self.edit_teacher, state="disabled", padx=8, pady=4)
+        self.edit_button = tk.Button(
+            self.action_frame,
+            image=self.edit_icon,
+            command=self.edit_teacher,
+            state="disabled",
+            padx=8,
+            pady=4,
+            borderwidth=0,
+            relief="flat",
+            highlightthickness=0,
+            activebackground=BACKGROUND_COLOR
+        )
         self.edit_button.pack(side="left", padx=8)
 
-        self.save_button = tk.Button(self.button_frame, image=self.save_icon, command=self.save_changes, state="disabled", padx=8, pady=4)
+        self.save_button = tk.Button(
+            self.action_frame,
+            image=self.save_icon,
+            command=self.save_changes,
+            state="disabled",
+            padx=8,
+            pady=4,
+            borderwidth=0,
+            relief="flat",
+            highlightthickness=0,
+            activebackground=BACKGROUND_COLOR
+        )
         self.save_button.pack(side="left", padx=8)
 
-        self.cancel_button = tk.Button(self.button_frame, image=self.cancel_icon, command=self.cancel_edit, state="disabled", padx=8, pady=4)
+        self.cancel_button = tk.Button(
+            self.action_frame,
+            image=self.cancel_icon,
+            command=self.cancel_edit,
+            state="disabled",
+            padx=8,
+            pady=4,
+            borderwidth=0,
+            relief="flat",
+            highlightthickness=0,
+            activebackground=BACKGROUND_COLOR
+        )
         self.cancel_button.pack(side="left", padx=8)
 
-        self.delete_button = tk.Button(self.button_frame, image=self.delete_icon, command=self.confirm_delete_schedule, state="disabled", padx=8, pady=4)
+        self.delete_button = tk.Button(
+            self.action_frame,
+            image=self.delete_icon,
+            command=self.confirm_delete_schedule,
+            state="disabled",
+            padx=8,
+            pady=4,
+            borderwidth=0,
+            relief="flat",
+            highlightthickness=0,
+        )
         self.delete_button.pack(side="left", padx=8)
 
-        self.download_button = tk.Button(self.button_frame, image=self.download_icon, command=self.download_grade, state="disabled", padx=8, pady=4)
+        self.download_button = tk.Button(
+            self.action_frame,
+            image=self.download_icon,
+            command=self.download_grade,
+            state="disabled",
+            padx=8,
+            pady=4,
+            borderwidth=0,
+            relief="flat",
+            highlightthickness=0,
+        )
         self.download_button.pack(side="left", padx=8)
 
-        self.timetable_frame = tk.Frame(self.root, bg=BACKGROUND_COLOR)
+        # Área para exibição da grade de aulas
+        self.timetable_frame = tk.Frame(self.main_frame, bg=BACKGROUND_COLOR)
         self.timetable_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         self.scroll_canvas = tk.Canvas(self.timetable_frame)
@@ -74,6 +186,13 @@ class TimetableApp:
             "<Configure>",
             lambda e: self.scroll_canvas.configure(scrollregion=self.scroll_canvas.bbox("all"))
         )
+
+    def show_home_screen(self):
+        """Retorna à tela inicial."""
+        self.root.destroy()
+        home_root = tk.Tk()
+        app = ScreenManager(home_root)
+        home_root.mainloop()
 
     def generate_timetable(self):
         timetable = {cls: {day: {time_slot: None for time_slot in time_slots} for day in days_of_week} for cls in classes}
@@ -113,26 +232,39 @@ class TimetableApp:
     
     def create_class_table(self, parent, name, timetable_class):
         frame = tk.Frame(parent, bg=WHITE_COLOR, relief="solid", borderwidth=1)
-        frame.pack(padx=15, pady=10, fill="x", expand=True)
+        frame.pack(padx=20, pady=10, fill="x", expand=True)
+
+        header = tk.Frame(frame)
+        header.grid(row=0, column=0, columnspan=len(days_of_week) + 2, sticky="ew")
         
-        label = tk.Label(frame, text=f"Grade para {name}", font=HEADER_FONT, bg=HEADER_COLOR, fg=TEXT_COLOR)
-        label.grid(row=0, column=0, columnspan=len(days_of_week) + 1, pady=5)
+        header_label = tk.Label(header, text=f"Grade para {name}", font=HEADER_FONT,
+                                fg=TEXT_COLOR)
+        header_label.pack(side="left", padx=10, pady=5)
+        
+        var = tk.BooleanVar()
+        checkbox = tk.Checkbutton(header, variable=var, command=lambda: self.select_grade(name, var))
 
-        var = tk.BooleanVar()  
-        checkbox = tk.Checkbutton(frame, variable=var, command=lambda: self.select_grade(name, var))
-        checkbox.grid(row=0, column=len(days_of_week) + 1, padx=6, pady=6)
-
+        checkbox.pack(side="right", padx=10, pady=5)
+    
+        tk.Label(frame, text="", font=LABEL_FONT, fg=TEXT_COLOR,
+                relief="ridge", borderwidth=1).grid(row=1, column=0, padx=6, pady=6, sticky="nsew")
         for i, day in enumerate(days_of_week):
-            tk.Label(frame, text=day, font=LABEL_FONT, bg=HEADER_COLOR, fg=TEXT_COLOR).grid(row=1, column=i+1, padx=6, pady=6)
+            day_label = tk.Label(frame, text=day, font=LABEL_FONT, fg=TEXT_COLOR,
+                                relief="ridge", borderwidth=1)
+            day_label.grid(row=1, column=i+1, padx=6, pady=6, sticky="nsew")
         
         for row, time_slot in enumerate(time_slots, start=2):
-            tk.Label(frame, text=time_slot, font=TIME_SLOT_FONT, bg=LABEL_COLOR, fg=TEXT_COLOR).grid(row=row, column=0, padx=10, pady=3)
+            time_label = tk.Label(frame, text=time_slot, font=TIME_SLOT_FONT, bg=LABEL_COLOR, fg=TEXT_COLOR,
+                                relief="ridge", borderwidth=1)
+            time_label.grid(row=row, column=0, padx=10, pady=3, sticky="nsew")
+
             for col, day in enumerate(days_of_week, start=1):
-                teacher = timetable_class[day].get(time_slot, None)
-                cell_label = tk.Label(frame, text=teacher, font=TEACHER_FONT, bg=WHITE_COLOR, fg=TEXT_COLOR, padx=8, pady=4, relief="groove", borderwidth=1)
-                cell_label.grid(row=row, column=col, padx=6, pady=3)
+                teacher = timetable_class[day].get(time_slot, "[SEM PROFESSOR]")
+                cell_label = tk.Label(frame, text=teacher, font=TEACHER_FONT, bg=WHITE_COLOR, fg=TEXT_COLOR,
+                                    padx=8, pady=4, relief="groove", borderwidth=1)
+                cell_label.grid(row=row, column=col, padx=6, pady=3, sticky="nsew")
                 cell_label.bind("<Button-1>", lambda e, d=day, t=time_slot, l=cell_label: self.select_cell(d, t, l))
-    
+
     def select_grade(self, grade_name, var):
         if var.get():
             if grade_name not in self.selected_grades:
@@ -188,11 +320,12 @@ class TimetableApp:
         self.selected_cell = label
         self.selected_cell.config(bg=LABEL_COLOR)
         
-        self.original_teacher = self.selected_cell.cget("text")  
+        self.original_teacher = self.selected_cell.cget("text")
         self.edit_button.config(state="normal")
         self.save_button.config(state="normal")
         self.cancel_button.config(state="normal")
         self.delete_button.config(state="normal")
+
     
     def edit_teacher(self):
         if not self.selected_cell:

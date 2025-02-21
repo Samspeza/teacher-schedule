@@ -1,0 +1,28 @@
+Grade de ADS4
+
+Segunda:
+19:10 - 20:25: Taisa
+20:25 - 20:45: INTERVALO
+20:45 - 22:00: Rogerio
+
+Terça:
+19:10 - 20:25: Joao Otávio
+20:25 - 20:45: INTERVALO
+20:45 - 22:00: Joao Otávio
+
+Quarta:
+19:10 - 20:25: Lidiana
+20:25 - 20:45: INTERVALO
+20:45 - 22:00: Taisa
+
+Quinta:
+19:10 - 20:25: Joao Marcelo
+20:25 - 20:45: INTERVALO
+20:45 - 22:00: Fábio
+
+Sexta:
+19:10 - 20:25: Franco
+20:25 - 20:45: INTERVALO
+20:45 - 22:00: Cícero
+
+==============================

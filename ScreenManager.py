@@ -1,6 +1,5 @@
 import tkinter as tk
 from saved_grades import SavedGradesApp
-from teacherschedule import TimetableApp
 
 class ScreenManager:
     def __init__(self, root): 
@@ -27,12 +26,16 @@ class ScreenManager:
         self.saved_button.pack(pady=20)
 
     def open_timetable(self):
+        """Abre a tela de criação de grade"""
         self.root.destroy()
+        from teacherschedule import TimetableApp
+
         timetable_root = tk.Tk()
         app = TimetableApp(timetable_root)
         timetable_root.mainloop()
 
     def open_saved(self):
+        """Abre a tela de grades salvas"""
         self.root.destroy()
         saved_root = tk.Tk()
         saved_app = SavedGradesApp(saved_root)
