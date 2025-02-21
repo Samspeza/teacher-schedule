@@ -4,6 +4,8 @@ import json
 import os
 from DbContext.database import DB_NAME
 from DbContext.models import create_tables
+import tkinter.messagebox as messagebox
+
 
 
 class SavedGradesApp:
@@ -44,7 +46,9 @@ class SavedGradesApp:
                 grade_name = grade[1]  
                 grade_contents = grade[2]  
                 save_grade(grade_name, grade_contents)  
-                tk.messagebox.showinfo("Sucesso", f"Grade '{grade_name}' salva novamente!")
+                messagebox.showinfo("Sucesso", f"Grade '{grade_name}' salva novamente!")
+                self.saved_grades_listbox.insert(selected_index, grade_name)  
+
 
 def save_grade(name, contents):
     conn = sqlite3.connect(DB_NAME)
@@ -98,6 +102,15 @@ def get_grade_by_name(name):
     conn.close()
     
     return grade
+
+def check_saved_grades():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, content, file_path FROM saved_grades")
+    saved_grades = cursor.fetchall()
+    conn.close()
+    for grade in saved_grades:
+        print(grade)
 
 if __name__ == "__main__": 
     create_tables()  

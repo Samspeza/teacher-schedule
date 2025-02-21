@@ -1,3 +1,4 @@
+import sqlite3
 import tkinter as tk
 from tkinter import ttk
 import random
@@ -5,6 +6,7 @@ from tkinter import PhotoImage
 from tkinter import filedialog
 from tkinter import messagebox
 from tkinter.messagebox import askyesno
+from DbContext.database import DB_NAME
 from style import *
 from config import teachers, teacher_limits, classes, days_of_week, time_slots
 
@@ -13,7 +15,7 @@ class TimetableApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Gerenciamento de Grade de Aulas")
-        self.root.geometry("650x600")
+        self.root.geometry("700x600")
         self.root.config(bg=BACKGROUND_COLOR)
         self.selected_cell = None
         self.teacher_allocations = {teacher: set() for teacher in teachers}
@@ -143,22 +145,41 @@ class TimetableApp:
             self.download_button.config(state="normal")
         else:
             self.download_button.config(state="disabled")
+            
+    DB_NAME = "schedule.db"
 
     def download_grade(self):
         file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt")])
         if not file_path:
             return
+        
+        grade_content = ""
+        for grade_name in self.selected_grades:
+            grade_content += f"Grade de {grade_name}\n"
+            timetable_class = self.timetable[grade_name]
+            for day in days_of_week:
+                grade_content += f"\n{day}:\n"
+                for time_slot in time_slots:
+                    teacher = timetable_class[day].get(time_slot, "[SEM PROFESSOR]")
+                    grade_content += f"{time_slot}: {teacher}\n"
+            grade_content += "\n" + "="*30 + "\n"
+        
         with open(file_path, "w") as f:
-            for grade_name in self.selected_grades:
-                f.write(f"Grade de {grade_name}\n")
-                timetable_class = self.timetable[grade_name]
-                for day in days_of_week:
-                    f.write(f"\n{day}:\n")
-                    for time_slot in time_slots:
-                        teacher = timetable_class[day].get(time_slot, "[SEM PROFESSOR]")
-                        f.write(f"{time_slot}: {teacher}\n")
-                f.write("\n" + "="*30 + "\n")
-        messagebox.showinfo("Sucesso", "Grade(s) baixada(s) com sucesso!")
+            f.write(grade_content)
+
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+
+        for grade_name in self.selected_grades:
+            cursor.execute("""
+            INSERT INTO saved_grades (name, content, file_path)
+            VALUES (?, ?, ?)
+            """, (grade_name, grade_content, file_path))
+        
+        conn.commit()
+        conn.close()
+        messagebox.showinfo("Sucesso", "Grade(s) baixada(s) com sucesso e salvas no banco!")
+
 
     def select_cell(self, day, time_slot, label):
         if self.selected_cell:

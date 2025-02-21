@@ -91,12 +91,11 @@ def create_tables():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS saved_grades (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        content TEXT NOT NULL,  
-        file_path TEXT         
-    );
+        name TEXT,
+        content TEXT,
+        file_path TEXT
+    )
     """)
-
 
     cursor.execute("DROP TABLE teacher_availability;")
     cursor.execute("ALTER TABLE teacher_availability_new RENAME TO teacher_availability;")
