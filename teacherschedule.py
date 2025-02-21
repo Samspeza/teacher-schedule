@@ -15,7 +15,7 @@ class TimetableApp:
         self.selected_cell = None
         self.teacher_allocations = {teacher: set() for teacher in teachers}
         
-        self.setup_ui()
+        self.setup_ui()       
     
     def setup_ui(self):
         title_label = tk.Label(self.root, text="Gerenciamento de Grade de Aulas", font=HEADER_FONT, bg=HEADER_COLOR, fg=TEXT_COLOR)
@@ -29,7 +29,11 @@ class TimetableApp:
         
         self.list_icon = PhotoImage(file="icons/list.png").subsample(20, 20)  
         self.edit_icon = PhotoImage(file="icons/edit.png").subsample(20, 20)  
-        self.delete_icon = PhotoImage(file="icons/delete.png").subsample(20, 20)  
+        self.delete_icon = PhotoImage(file="icons/delete.png").subsample(20, 20) 
+        self.create_icon = PhotoImage(file="icons/mais.png").subsample(20, 20)  
+
+        self.create_button = tk.Button(self.button_frame, image=self.create_icon, command=self.create_manual_schedule, padx=8, pady=4)
+        self.create_button.pack(side="left", padx=8)
         
         self.list_button = tk.Button(self.button_frame, image=self.list_icon, command=self.show_timetable, padx=8, pady=4)
         self.list_button.pack(side="left", padx=8)
@@ -192,6 +196,27 @@ class TimetableApp:
             self.delete_button.config(state="disabled")
             self.save_button.config(state="disabled")
             self.cancel_button.config(state="disabled")
+
+    def create_manual_schedule(self):
+        manual_schedule_window = tk.Toplevel(self.root)
+        manual_schedule_window.title("Criar Grade Manualmente")
+        
+        class_label = tk.Label(manual_schedule_window, text="Escolha a Turma:")
+        class_label.pack(pady=8)
+        
+        class_select = ttk.Combobox(manual_schedule_window, values=classes)
+        class_select.pack(pady=8)
+        
+        def save_manual_schedule():
+            selected_class = class_select.get()
+           
+            
+            self.timetable[selected_class]= selected_class
+            manual_schedule_window.destroy()
+            self.show_timetable()
+        
+        save_button = tk.Button(manual_schedule_window, text="Salvar", command=save_manual_schedule)
+        save_button.pack(pady=8)
 
 if __name__ == "__main__":
     root = tk.Tk()

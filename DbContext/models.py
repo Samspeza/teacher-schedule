@@ -131,3 +131,20 @@ def log_change(action, table_name, old_value, new_value, user):
 
     conn.commit()
     conn.close()
+
+def create_tables():
+    conn = sqlite3.connect(DB_NAME)  
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS saved_grades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        content TEXT NOT NULL,
+        file_path TEXT
+    )
+    """)
+    
+    conn.commit() 
+    conn.close()  
+
