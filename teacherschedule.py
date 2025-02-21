@@ -2,9 +2,12 @@ import tkinter as tk
 from tkinter import ttk
 import random
 from tkinter import PhotoImage
+from tkinter import filedialog
+from tkinter import messagebox
 from tkinter.messagebox import askyesno
 from style import *
 from config import teachers, teacher_limits, classes, days_of_week, time_slots
+
 
 class TimetableApp:
     def __init__(self, root):
@@ -14,50 +17,54 @@ class TimetableApp:
         self.root.config(bg=BACKGROUND_COLOR)
         self.selected_cell = None
         self.teacher_allocations = {teacher: set() for teacher in teachers}
-        
-        self.setup_ui()       
-    
+        self.selected_grades = []
+        self.setup_ui()
+
     def setup_ui(self):
         title_label = tk.Label(self.root, text="Gerenciamento de Grade de Aulas", font=HEADER_FONT, bg=HEADER_COLOR, fg=TEXT_COLOR)
         title_label.pack(pady=10)
-        
+
         self.button_frame = tk.Frame(self.root, bg=BACKGROUND_COLOR)
         self.button_frame.pack(pady=10)
-        
+
         self.save_icon = PhotoImage(file="icons/salvar.png").subsample(20, 20)  
         self.cancel_icon = PhotoImage(file="icons/cancel.png").subsample(20, 20)  
-        
+
         self.list_icon = PhotoImage(file="icons/list.png").subsample(20, 20)  
         self.edit_icon = PhotoImage(file="icons/edit.png").subsample(20, 20)  
         self.delete_icon = PhotoImage(file="icons/delete.png").subsample(20, 20) 
         self.create_icon = PhotoImage(file="icons/mais.png").subsample(20, 20)  
+        self.download_icon = PhotoImage(file="icons/download.png").subsample(20, 20)  
 
         self.create_button = tk.Button(self.button_frame, image=self.create_icon, command=self.create_manual_schedule, padx=8, pady=4)
         self.create_button.pack(side="left", padx=8)
-        
+
         self.list_button = tk.Button(self.button_frame, image=self.list_icon, command=self.show_timetable, padx=8, pady=4)
         self.list_button.pack(side="left", padx=8)
-        
+
         self.edit_button = tk.Button(self.button_frame, image=self.edit_icon, command=self.edit_teacher, state="disabled", padx=8, pady=4)
         self.edit_button.pack(side="left", padx=8)
-        
+
         self.save_button = tk.Button(self.button_frame, image=self.save_icon, command=self.save_changes, state="disabled", padx=8, pady=4)
         self.save_button.pack(side="left", padx=8)
 
         self.cancel_button = tk.Button(self.button_frame, image=self.cancel_icon, command=self.cancel_edit, state="disabled", padx=8, pady=4)
         self.cancel_button.pack(side="left", padx=8)
-        
+
         self.delete_button = tk.Button(self.button_frame, image=self.delete_icon, command=self.confirm_delete_schedule, state="disabled", padx=8, pady=4)
         self.delete_button.pack(side="left", padx=8)
-        
+
+        self.download_button = tk.Button(self.button_frame, image=self.download_icon, command=self.download_grade, state="disabled", padx=8, pady=4)
+        self.download_button.pack(side="left", padx=8)
+
         self.timetable_frame = tk.Frame(self.root, bg=BACKGROUND_COLOR)
         self.timetable_frame.pack(fill="both", expand=True, padx=10, pady=10)
-        
+
         self.scroll_canvas = tk.Canvas(self.timetable_frame)
         self.scroll_frame = tk.Frame(self.scroll_canvas, bg=BACKGROUND_COLOR)
         self.scroll_bar = tk.Scrollbar(self.timetable_frame, orient="vertical", command=self.scroll_canvas.yview)
         self.scroll_canvas.configure(yscrollcommand=self.scroll_bar.set)
-        
+
         self.scroll_bar.pack(side="right", fill="y")
         self.scroll_canvas.pack(side="left", fill="both", expand=True)
         self.scroll_canvas.create_window((0, 0), window=self.scroll_frame, anchor="nw")
@@ -65,10 +72,10 @@ class TimetableApp:
             "<Configure>",
             lambda e: self.scroll_canvas.configure(scrollregion=self.scroll_canvas.bbox("all"))
         )
-    
+
     def generate_timetable(self):
         timetable = {cls: {day: {time_slot: None for time_slot in time_slots} for day in days_of_week} for cls in classes}
-    
+
         for cls in classes:
             for day in days_of_week:
                 previous_teacher = None
@@ -77,7 +84,7 @@ class TimetableApp:
                         teacher for teacher in teachers
                         if teacher not in teacher_limits or len(self.teacher_allocations[teacher]) < teacher_limits.get(teacher, float('inf'))
                     ]
-    
+
                     if time_slot == "20:25 - 20:45": 
                         teacher = "INTERVALO"
                     elif not available_teachers:
@@ -108,7 +115,11 @@ class TimetableApp:
         
         label = tk.Label(frame, text=f"Grade para {name}", font=HEADER_FONT, bg=HEADER_COLOR, fg=TEXT_COLOR)
         label.grid(row=0, column=0, columnspan=len(days_of_week) + 1, pady=5)
-        
+
+        var = tk.BooleanVar()  
+        checkbox = tk.Checkbutton(frame, variable=var, command=lambda: self.select_grade(name, var))
+        checkbox.grid(row=0, column=len(days_of_week) + 1, padx=6, pady=6)
+
         for i, day in enumerate(days_of_week):
             tk.Label(frame, text=day, font=LABEL_FONT, bg=HEADER_COLOR, fg=TEXT_COLOR).grid(row=1, column=i+1, padx=6, pady=6)
         
@@ -120,6 +131,35 @@ class TimetableApp:
                 cell_label.grid(row=row, column=col, padx=6, pady=3)
                 cell_label.bind("<Button-1>", lambda e, d=day, t=time_slot, l=cell_label: self.select_cell(d, t, l))
     
+    def select_grade(self, grade_name, var):
+        if var.get():
+            if grade_name not in self.selected_grades:
+                self.selected_grades.append(grade_name)
+        else:
+            if grade_name in self.selected_grades:
+                self.selected_grades.remove(grade_name)
+
+        if self.selected_grades:
+            self.download_button.config(state="normal")
+        else:
+            self.download_button.config(state="disabled")
+
+    def download_grade(self):
+        file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt")])
+        if not file_path:
+            return
+        with open(file_path, "w") as f:
+            for grade_name in self.selected_grades:
+                f.write(f"Grade de {grade_name}\n")
+                timetable_class = self.timetable[grade_name]
+                for day in days_of_week:
+                    f.write(f"\n{day}:\n")
+                    for time_slot in time_slots:
+                        teacher = timetable_class[day].get(time_slot, "[SEM PROFESSOR]")
+                        f.write(f"{time_slot}: {teacher}\n")
+                f.write("\n" + "="*30 + "\n")
+        messagebox.showinfo("Sucesso", "Grade(s) baixada(s) com sucesso!")
+
     def select_cell(self, day, time_slot, label):
         if self.selected_cell:
             self.selected_cell.config(bg=WHITE_COLOR)
