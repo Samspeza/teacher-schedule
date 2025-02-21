@@ -8,7 +8,7 @@ from tkinter import filedialog
 from tkinter import messagebox
 from tkinter.messagebox import askyesno
 from DbContext.database import DB_NAME
-from style import *
+from CSS.style import *
 from config import teachers, teacher_limits, classes, days_of_week, time_slots
 from ScreenManager import ScreenManager
 
