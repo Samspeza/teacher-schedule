@@ -24,12 +24,10 @@ class TimetableApp:
         self.setup_ui()
 
     def setup_ui(self):
-        # Faixa lateral azul com largura aumentada
         self.sidebar_frame = tk.Frame(self.root, bg="#2A72C3", width=200)
         self.sidebar_frame.pack(side="left", fill="y")
         self.sidebar_frame.pack_propagate(False)
 
-        # Botão com ícone de chapéu para voltar à tela principal
         self.graduation_button = tk.Button(
             self.sidebar_frame,
             text="🎓",
@@ -75,7 +73,7 @@ class TimetableApp:
         self.create_icon = PhotoImage(file="icons/mais.png").subsample(20, 20)
         self.download_icon = PhotoImage(file="icons/download.png").subsample(20, 20)
 
-        # Botões de ação dentro do frame action_frame, sem borda e sem fundo extra
+        # Botões de ação dentro do frame action_frame
         self.create_button = tk.Button(
             self.action_frame,
             image=self.create_icon,
