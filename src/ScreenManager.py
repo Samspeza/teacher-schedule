@@ -5,7 +5,7 @@ class ScreenManager:
     def __init__(self, root): 
         self.root = root
         self.root.title("Módulo Menu")
-        self.root.geometry("650x600")
+        self.root.geometry("900x800")
         self.root.configure(bg="#F8F8F8")
         
         # Frame central
