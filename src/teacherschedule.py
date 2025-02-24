@@ -9,8 +9,10 @@ from tkinter import messagebox
 from tkinter.messagebox import askyesno
 from DbContext.database import DB_NAME
 from CSS.style import *
-from config import teachers, teacher_limits, classes, days_of_week, time_slots
+from UserControl.config import teachers, teacher_limits, classes, days_of_week, time_slots
 from ScreenManager import ScreenManager
+from UserControl.sidebar import create_sidebar
+#from UserControl.button_design import create_action_buttons
 
 class TimetableApp:
     def __init__(self, root):
@@ -21,31 +23,32 @@ class TimetableApp:
         self.selected_cell = None
         self.teacher_allocations = {teacher: set() for teacher in teachers}
         self.selected_grades = []
+
+        self.main_frame = tk.Frame(self.root, bg=BACKGROUND_COLOR)
+        self.main_frame.pack(fill="both", expand=True)
+
         self.setup_ui()
 
     def setup_ui(self):
-        self.sidebar_frame = tk.Frame(self.root, bg="#2A72C3", width=200)
-        self.sidebar_frame.pack(side="left", fill="y")
-        self.sidebar_frame.pack_propagate(False)
-
-        self.graduation_button = tk.Button(
-            self.sidebar_frame,
-            text="🎓",
-            command=self.show_home_screen,
-            font=("Arial", 80),
-            fg="white",
-            bg="#2A72C3",
-            borderwidth=0,
-            relief="flat",
-            highlightthickness=0
+        self.sidebar_frame = create_sidebar(
+            self.main_frame, 
+            show_home_screen=self.show_home_screen,
+            show_modules_screen=self.show_modules_screen,
+            save_changes=self.save_changes
         )
-        self.graduation_button.pack(pady=10)
+        self.action_frame = tk.Frame(self.main_frame, bg=BACKGROUND_COLOR)
+        self.action_frame.pack(pady=10, padx=10, fill="x")
+       # create_action_buttons(self.action_frame, {
+       #     "create": self.create_manual_schedule,
+       #     "show_timetable": self.show_timetable,
+       #     "edit_teacher": self.edit_teacher,
+       #     "save_changes": self.save_changes,
+       #     "cancel_edit": self.cancel_edit,
+       #     "confirm_delete_schedule": self.confirm_delete_schedule,
+       #     "download_grade": self.download_grade
+       # })
 
-        # Área principal
-        self.main_frame = tk.Frame(self.root, bg=BACKGROUND_COLOR)
-        self.main_frame.pack(side="right", fill="both", expand=True)
-
-        # Cabeçalho com o título (área cinza)
+        # Cabeçalho com o título
         self.header_frame = tk.Frame(self.main_frame, bg="#F8F8F8")
         self.header_frame.pack(pady=20, fill="x", padx=10)
 
@@ -60,7 +63,7 @@ class TimetableApp:
         )
         title_label.pack(fill="x", padx=10)
 
-        # Frame para os botões de ação (fora do cabeçalho, dentro da área principal)
+        # Frame para os botões de ação
         self.action_frame = tk.Frame(self.main_frame, bg=BACKGROUND_COLOR)
         self.action_frame.pack(pady=10, padx=10, fill="x")
 
@@ -184,6 +187,13 @@ class TimetableApp:
             "<Configure>",
             lambda e: self.scroll_canvas.configure(scrollregion=self.scroll_canvas.bbox("all"))
         )
+
+    def show_modules_screen(self):
+        """Expande ou recolhe o painel de módulos."""
+        if self.modules_frame.winfo_ismapped():
+            self.modules_frame.pack_forget()  
+        else:
+            self.modules_frame.pack(pady=10, padx=10, fill="x")  
 
     def show_home_screen(self):
         """Retorna à tela inicial."""
