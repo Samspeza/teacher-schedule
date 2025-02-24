@@ -1,0 +1,28 @@
+Grade de CC1
+
+Segunda:
+19:10 - 20:25: Rogerio
+20:25 - 20:45: INTERVALO
+20:45 - 22:00: Flávio
+
+Terça:
+19:10 - 20:25: Janayna
+20:25 - 20:45: INTERVALO
+20:45 - 22:00: Rogerio
+
+Quarta:
+19:10 - 20:25: Rogerio
+20:25 - 20:45: INTERVALO
+20:45 - 22:00: Elio
+
+Quinta:
+19:10 - 20:25: Lidiana
+20:25 - 20:45: INTERVALO
+20:45 - 22:00: Valter
+
+Sexta:
+19:10 - 20:25: Taisa
+20:25 - 20:45: INTERVALO
+20:45 - 22:00: Allan
+
+==============================
