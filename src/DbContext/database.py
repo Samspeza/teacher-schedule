@@ -101,5 +101,17 @@ def create_tables():
     cursor.execute("ALTER TABLE teacher_availability_new RENAME TO teacher_availability;")
     cursor.execute("PRAGMA foreign_keys=on;")
 
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS grades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        content TEXT,
+        file_path TEXT
+    );
+    """)
+
     conn.commit()
     conn.close()

@@ -2,6 +2,7 @@
 import sqlite3
 import sys
 import os
+from tkinter import messagebox
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'DbContext')))
 from database import DB_NAME
@@ -153,5 +154,77 @@ def delete_grade_from_db(grade_name):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM grades WHERE name = ?", (grade_name,))
+    conn.commit()
+    conn.close()
+
+# Funções do banco de dados em SAVED_GRADES
+def save_grade(name, contents):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+    INSERT INTO saved_grades (name, content, file_path)
+    VALUES (?, ?, ?)
+    """, (name, contents, ""))  
+    
+    conn.commit()
+    
+    grade_id = cursor.lastrowid
+
+    file_name = f"grade_{grade_id}.txt"
+    file_path = os.path.join(os.getcwd(), "saved_grades", file_name)
+    
+    if not os.path.exists(os.path.dirname(file_path)):
+        os.makedirs(os.path.dirname(file_path))
+    
+    with open(file_path, 'w') as file:
+        file.write(contents)
+
+    cursor.execute("""
+    UPDATE saved_grades
+    SET file_path = ?
+    WHERE id = ?
+    """, (file_path, grade_id))
+    
+    conn.commit()
+    conn.close()
+
+
+def get_saved_grades():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM saved_grades")
+    return cursor.fetchall()
+
+def get_grade_by_name(grade_name):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM saved_grades WHERE name = ?", (grade_name,))
+    return cursor.fetchone()
+
+def delete_grade_by_name(grade_name):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT id, file_path FROM saved_grades WHERE name = ?", (grade_name,))
+    grade_data = cursor.fetchone()
+    
+    if grade_data:
+        grade_id, file_path = grade_data
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        cursor.execute("DELETE FROM saved_grades WHERE id = ?", (grade_id,))
+        conn.commit()
+    conn.close()
+
+
+def create_tables():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS grades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        contents TEXT NOT NULL
+    )''')
     conn.commit()
     conn.close()

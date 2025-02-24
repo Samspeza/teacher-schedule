@@ -2,7 +2,7 @@ import sqlite3
 import tkinter as tk
 import os
 from DbContext.database import DB_NAME
-from DbContext.models import create_tables, delete_grade_from_db
+from DbContext.models import create_tables, delete_grade_by_name, delete_grade_from_db, get_grade_by_name, get_saved_grades, save_grade, create_tables
 import tkinter.messagebox as messagebox
 from tkinter import PhotoImage
 from UserControl import config
@@ -133,21 +133,32 @@ class SavedGradesApp:
         if selected_index:
             selected_grade = self.saved_grades_listbox.get(selected_index)  
             grade = get_grade_by_name(selected_grade)
+            
             if grade:
                 grade_name = grade[1]  
                 grade_contents = grade[2]  
                 save_grade(grade_name, grade_contents)  
+                self.populate_saved_grades()
                 messagebox.showinfo("Sucesso", f"Grade '{grade_name}' salva novamente!")
 
     def delete_grade(self):
-        """Deleta a grade selecionada"""
+        """Deleta a grade selecionada e atualiza a tela."""
         selected_index = self.saved_grades_listbox.curselection()
         if selected_index:
-            selected_grade = self.saved_grades_listbox.get(selected_index)  
+            selected_grade = self.saved_grades_listbox.get(selected_index)
             confirm = messagebox.askyesno("Confirmar", f"Tem certeza que deseja excluir a grade '{selected_grade}'?")
             if confirm:
-                delete_grade_from_db(selected_grade)  
-                self.populate_saved_grades()
+                try:
+                    delete_grade_by_name(selected_grade)
+                    self.populate_saved_grades()
+                    messagebox.showinfo("Sucesso", f"Grade '{selected_grade}' deletada com sucesso!")
+                except Exception as e:
+                    messagebox.showerror("Erro", f"Erro ao deletar a grade '{selected_grade}': {e}")
+            else:
+                messagebox.showinfo("Cancelado", "A exclusão foi cancelada.")
+        else:
+            messagebox.showwarning("Seleção inválida", "Selecione uma grade para deletar.")
+
 
     def teacher_exists(name):
         conn = sqlite3.connect(DB_NAME)
@@ -284,67 +295,6 @@ class SavedGradesApp:
         
             self.save_button.config(state="disabled")
             self.cancel_button.config(state="disabled")
-
-
-# Funções do banco de dados
-def save_grade(name, contents):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    
-    cursor.execute("""
-    INSERT INTO saved_grades (name, content, file_path)
-    VALUES (?, ?, ?)
-    """, (name, contents, ""))  
-    
-    conn.commit()
-    
-    grade_id = cursor.lastrowid
-
-    file_name = f"grade_{grade_id}.txt"
-    file_path = os.path.join(os.getcwd(), "saved_grades", file_name)
-    
-    if not os.path.exists(os.path.dirname(file_path)):
-        os.makedirs(os.path.dirname(file_path))
-    
-    with open(file_path, 'w') as file:
-        file.write(contents)
-
-    cursor.execute("""
-    UPDATE saved_grades
-    SET file_path = ?
-    WHERE id = ?
-    """, (file_path, grade_id))
-    
-    conn.commit()
-    conn.close()
-
-
-def get_saved_grades():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM saved_grades")
-    return cursor.fetchall()
-
-def get_grade_by_name(grade_name):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM saved_grades WHERE name = ?", (grade_name,))
-    return cursor.fetchone()
-
-def delete_grade_by_name(grade_name):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    
-    cursor.execute("SELECT file_path FROM saved_grades WHERE name = ?", (grade_name,))
-    file_path = cursor.fetchone()
-    
-    if file_path:
-        if os.path.exists(file_path[0]):
-            os.remove(file_path[0])
-    
-    cursor.execute("DELETE FROM saved_grades WHERE name = ?", (grade_name,))
-    conn.commit()
-    conn.close()
 
 if __name__ == "__main__": 
     create_tables()  
