@@ -148,3 +148,10 @@ def create_tables():
     conn.commit() 
     conn.close()  
 
+def delete_grade_from_db(grade_name):
+    """Remove uma grade do banco de dados"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM grades WHERE name = ?", (grade_name,))
+    conn.commit()
+    conn.close()

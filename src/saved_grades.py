@@ -2,7 +2,7 @@ import sqlite3
 import tkinter as tk
 import os
 from DbContext.database import DB_NAME
-from DbContext.models import create_tables
+from DbContext.models import create_tables, delete_grade_from_db
 import tkinter.messagebox as messagebox
 from tkinter import PhotoImage
 from UserControl import config
@@ -16,26 +16,28 @@ class SavedGradesApp:
         self.root.title("Grades Salvas")
         self.root.geometry("900x800")
         self.root.configure(bg="#F8F8F8")
-        
+
         # Criar o sidebar
         self.sidebar = create_sidebar(self.root, self.show_home_screen, self.show_modules_screen, self.save_changes)
-        
+
         # Contêiner principal
         content_frame = tk.Frame(self.root, bg="#F8F8F8")
         content_frame.pack(side="right", fill="both", expand=True)
 
         header_frame = tk.Frame(content_frame, bg="#F8F8F8", height=80)
         header_frame.pack(side="top", fill="x")
-        
+
         self.icon_label = tk.Label(header_frame, text="🎓", font=("Arial", 40), bg="#F8F8F8", fg="#2A72C3")
         self.icon_label.pack(side="left", padx=20)
-        
+
         self.menu_label = tk.Label(header_frame, text="GRADES SALVAS", font=("Arial", 16, "bold"), bg="#F8F8F8", fg="#2A72C3")
         self.menu_label.pack(side="left")
-        
-        self.saved_grades_listbox = tk.Listbox(content_frame, font=("Arial", 14), bg="#F8F8F8", fg="#2A72C3", selectmode=tk.SINGLE)
+
+        # Listbox para exibir as grades
+        self.saved_grades_listbox = tk.Listbox(content_frame, font=("Arial", 14), bg="#FFFFFF", fg="#2A72C3", selectmode=tk.SINGLE)
         self.saved_grades_listbox.pack(pady=20, padx=50, fill="both", expand=True)
-        
+
+        # Botões
         button_frame = tk.Frame(content_frame, bg="#F8F8F8")
         button_frame.pack(pady=10)
 
@@ -45,17 +47,88 @@ class SavedGradesApp:
         self.delete_button = tk.Button(button_frame, text="Deletar Grade", font=("Arial", 12), bg="red", fg="white", command=self.delete_grade)
         self.delete_button.pack(side="left", padx=10)
 
-        self.saved_grades_listbox.bind("<Double-1>", self.load_grade)  
-        
+        # Evento de duplo clique na listbox
+        self.saved_grades_listbox.bind("<Double-1>", self.load_grade)
+
         self.populate_saved_grades()
-        
+
     def populate_saved_grades(self):
+        """Carrega a lista de grades salvas"""
         self.saved_grades_listbox.delete(0, tk.END)
-        saved_grades = get_saved_grades()  
+        saved_grades = get_saved_grades()  # Buscar do banco
         for grade in saved_grades:
-            self.saved_grades_listbox.insert(tk.END, grade[1])  
+            self.saved_grades_listbox.insert(tk.END, grade[1])  # Exibe apenas o nome da grade
+
+    def load_grade(self, event):
+        """Exibe os detalhes da grade logo abaixo da opção selecionada"""
+        selected_index = self.saved_grades_listbox.curselection()
+        if selected_index:
+            selected_grade = self.saved_grades_listbox.get(selected_index)
+
+            # Verifica se a grade já está expandida
+            next_index = selected_index[0] + 1
+            if self.saved_grades_listbox.get(next_index).startswith("↳"):
+                self.remove_expanded_grade(selected_index[0])
+                return
+
+            grade = get_grade_by_name(selected_grade)
+            if not grade:
+                messagebox.showerror("Erro", "Grade não encontrada no banco de dados.")
+                return
+
+            grade_contents = grade[2].split("\n")
+            timetable_class = self.parse_timetable(grade_contents)
+
+            # Insere os detalhes logo abaixo
+            for day, schedule in timetable_class.items():
+                self.saved_grades_listbox.insert(next_index, f"↳ {day}")  # Nome do dia
+                next_index += 1
+                for time, teacher in schedule.items():
+                    self.saved_grades_listbox.insert(next_index, f"    {time}: {teacher}")  # Aulas
+                    next_index += 1
+
+    def remove_expanded_grade(self, index):
+        """Remove os detalhes da grade quando já estiverem abertos"""
+        while index + 1 < self.saved_grades_listbox.size():
+            if self.saved_grades_listbox.get(index + 1).startswith("↳") or self.saved_grades_listbox.get(index + 1).startswith("    "):
+                self.saved_grades_listbox.delete(index + 1)
+            else:
+                break
+
+    def parse_timetable(self, grade_contents):
+        """Processa a grade para exibir de forma organizada"""
+        timetable = {}
+        current_day = None
+
+        for line in grade_contents:
+            parsed_data = self.parse_grade_contents(line)
+            if parsed_data:
+                if parsed_data[0] == "DAY":
+                    current_day = parsed_data[1]
+                    timetable[current_day] = {}
+                elif current_day and isinstance(parsed_data, tuple):
+                    time_range, teacher_name = parsed_data
+                    timetable[current_day][time_range] = teacher_name
+
+        return timetable
+
+    @staticmethod
+    def parse_grade_contents(line):
+        """Identifica dias e horários da grade"""
+        line = line.strip()
+        if line in ["Segunda:", "Terça:", "Quarta:", "Quinta:", "Sexta:"]:
+            return "DAY", line[:-1]  # Remove o ":" no final
+
+        match = re.match(r"(\d{2}:\d{2} - \d{2}:\d{2}):\s*(.*)", line)
+        if match:
+            time_range = match.group(1)
+            teacher_name = match.group(2).strip()
+            return time_range, teacher_name
+
+        return None
 
     def re_save_grade(self):
+        """Salva novamente a grade selecionada"""
         selected_index = self.saved_grades_listbox.curselection()
         if selected_index:
             selected_grade = self.saved_grades_listbox.get(selected_index)  
@@ -65,20 +138,16 @@ class SavedGradesApp:
                 grade_contents = grade[2]  
                 save_grade(grade_name, grade_contents)  
                 messagebox.showinfo("Sucesso", f"Grade '{grade_name}' salva novamente!")
-                self.saved_grades_listbox.insert(selected_index, grade_name)  
 
     def delete_grade(self):
+        """Deleta a grade selecionada"""
         selected_index = self.saved_grades_listbox.curselection()
         if selected_index:
             selected_grade = self.saved_grades_listbox.get(selected_index)  
-            confirm = messagebox.askyesno("Confirmar Exclusão", f"Tem certeza que deseja deletar a grade '{selected_grade}'?")
-            
+            confirm = messagebox.askyesno("Confirmar", f"Tem certeza que deseja excluir a grade '{selected_grade}'?")
             if confirm:
-                delete_grade_by_name(selected_grade)
+                delete_grade_from_db(selected_grade)  
                 self.populate_saved_grades()
-                messagebox.showinfo("Sucesso", f"Grade '{selected_grade}' deletada com sucesso!")
-        else:
-            messagebox.showwarning("Aviso", "Selecione uma grade para deletar.")
 
     def teacher_exists(name):
         conn = sqlite3.connect(DB_NAME)
