@@ -1,18 +1,38 @@
 # models.py
 import sqlite3
-import sys
 import os
-from tkinter import messagebox
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'DbContext')))
 from database import DB_NAME
 
-DB_NAME = "schedule.db"
+def execute_query(query, params=()):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute(query, params)
+    conn.commit()
+    conn.close()
+
+def clear_teachers():
+    execute_query("DELETE FROM teachers")
+
+def clear_classes():
+    execute_query("DELETE FROM classes")
+
+def clear_time_slots():
+    execute_query("DELETE FROM time_slots")
+
+def clear_availability():
+    execute_query("DELETE FROM teacher_availability")
+
+def reset_ids():
+    """Reseta os IDs das tabelas para começar do 1 novamente"""
+    execute_query("DELETE FROM sqlite_sequence WHERE name='teachers'")
+    execute_query("DELETE FROM sqlite_sequence WHERE name='classes'")
+    execute_query("DELETE FROM sqlite_sequence WHERE name='time_slots'")
+    execute_query("DELETE FROM sqlite_sequence WHERE name='teacher_availability'")
 
 def get_teachers():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, name FROM teachers")
+    cursor.execute("SELECT id, name, max_days FROM teachers")
     teachers = cursor.fetchall()
     conn.close()
     return teachers
@@ -20,15 +40,23 @@ def get_teachers():
 def get_teacher_availability(teacher_id):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("""
-    SELECT day
-    FROM teacher_availability
-    WHERE teacher_id = ?
-    """, (teacher_id,))
+    cursor.execute("SELECT day FROM teacher_availability WHERE teacher_id = ?", (teacher_id,))
     availability = cursor.fetchall()
     conn.close()
-    return availability
+    return [day[0] for day in availability]
 
+def get_teacher_limit(teacher_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT max_days FROM teacher_limits WHERE teacher_id = ?", (teacher_id,))
+    result = cursor.fetchone()
+    
+    conn.close()
+    if result and result[0] is not None:
+        return result[0]
+    else:
+        return float('inf')  
 
 def insert_teacher(name, max_days=None):
     conn = sqlite3.connect(DB_NAME)
@@ -228,3 +256,87 @@ def create_tables():
     )''')
     conn.commit()
     conn.close()
+
+def get_teachers(self):
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, max_days FROM teachers")
+        teachers = cursor.fetchall()
+        conn.close()
+        return teachers
+
+def get_teacher_availability(self, teacher_id):
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT day FROM teacher_availability WHERE teacher_id = ?", (teacher_id,))
+        availability = [row[0] for row in cursor.fetchall()]
+        conn.close()
+        return ", ".join(availability)
+
+def load_teachers(self):
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+        
+        for teacher in self.get_teachers():
+            teacher_id, name, max_days = teacher
+            availability = self.get_teacher_availability(teacher_id)
+            self.tree.insert("", "end", values=(teacher_id, name, availability, max_days if max_days else "-"))
+
+
+def add_teacher(self, name, max_days):
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO teachers (name, max_days) VALUES (?, ?)", (name, max_days))
+        conn.commit()
+        conn.close()
+        self.load_teachers()
+
+def update_teacher(self, teacher_id, name, max_days):
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE teachers SET name = ?, max_days = ? WHERE id = ?", (name, max_days, teacher_id))
+        conn.commit()
+        conn.close()
+        self.load_teachers()
+
+def delete_teacher(self, teacher_id):
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM teachers WHERE id = ?", (teacher_id,))
+        conn.commit()
+        conn.close()
+        self.load_teachers()
+
+def load_teachers(self):
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+        
+        for teacher in self.get_teachers():
+            teacher_id, name, max_days = teacher
+            availability = self.get_teacher_availability(teacher_id)
+            self.tree.insert("", "end", values=(teacher_id, name, availability, max_days if max_days else "-"))
+
+def update_teacher_availability(self, teacher_id, availability):
+        """Atualiza a disponibilidade do professor no banco de dados"""
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM teacher_availability WHERE teacher_id = ?", (teacher_id,))
+        
+        for day in availability:
+            cursor.execute("INSERT INTO teacher_availability (teacher_id, day) VALUES (?, ?)", (teacher_id, day))
+
+        conn.commit()
+        conn.close()
+        self.load_teachers()
+
+def insert_teacher_limit(teacher_id, max_days):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO teacher_limits (teacher_id, max_days)
+    VALUES (?, ?)
+    """, (teacher_id, max_days))
+    conn.commit()
+    conn.close()
+

@@ -5,12 +5,12 @@ DB_NAME = "schedule.db"
 def create_tables():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS teachers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        max_days INTEGER NULL
+        max_days INTEGER
     );
     """)
 
@@ -19,7 +19,9 @@ def create_tables():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         teacher_id INTEGER,
         day TEXT NOT NULL,
-        FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+        time_slot_id INTEGER,
+        FOREIGN KEY (teacher_id) REFERENCES teachers(id),
+        FOREIGN KEY (time_slot_id) REFERENCES time_slots(id)
     );
     """)
 
@@ -62,54 +64,20 @@ def create_tables():
     );
     """)
 
-    cursor.execute("PRAGMA table_info(teacher_availability);")
-    columns = cursor.fetchall()
-
-    if not any(col[1] == 'time_slot_id' for col in columns):
-        cursor.execute("""
-        ALTER TABLE teacher_availability
-        ADD COLUMN time_slot_id INTEGER;
-        """)
-
-    cursor.execute("PRAGMA foreign_keys=off;")
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS teacher_availability_new (
+    CREATE TABLE IF NOT EXISTS saved_grades (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        teacher_id INTEGER,
-        day TEXT NOT NULL,
-        time_slot_id INTEGER,
-        FOREIGN KEY (teacher_id) REFERENCES teachers(id),
-        FOREIGN KEY (time_slot_id) REFERENCES time_slots(id)
+        name TEXT NOT NULL,
+        content TEXT NOT NULL,
+        file_path TEXT
     );
     """)
 
     cursor.execute("""
-    INSERT INTO teacher_availability_new (id, teacher_id, day, time_slot_id)
-    SELECT id, teacher_id, day, NULL FROM teacher_availability;
-    """)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS saved_grades (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        content TEXT,
-        file_path TEXT
-    )
-    """)
-
-    cursor.execute("DROP TABLE teacher_availability;")
-    cursor.execute("ALTER TABLE teacher_availability_new RENAME TO teacher_availability;")
-    cursor.execute("PRAGMA foreign_keys=on;")
-
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS grades (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        content TEXT,
-        file_path TEXT
+    CREATE TABLE IF NOT EXISTS teacher_limits (
+        teacher_id INTEGER,
+        max_days INTEGER, 
+        FOREIGN KEY (teacher_id) REFERENCES teachers(id)
     );
     """)
 

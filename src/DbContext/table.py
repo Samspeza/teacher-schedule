@@ -1,23 +1,10 @@
-import sqlite3
+import os
 
-from database import DB_NAME
-conn = sqlite3.connect('schedule.db')
-cursor = conn.cursor()
+from database import DB_NAME, create_tables
 
-# Consultar informações sobre a tabela
-#cursor.execute("PRAGMA table_info(teacher_availability);") # Mudar chamada conforme necessidade
-#columns = cursor.fetchall()
+# Deletando o banco de dados para recriar as tabelas
+if os.path.exists(DB_NAME):
+    os.remove(DB_NAME)
 
-def check_saved_grades():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name, content, file_path FROM saved_grades")
-    saved_grades = cursor.fetchall()
-    conn.close()
-    for grade in saved_grades:
-        print(grade)
-
-
-#for column in columns:
-#    print(column)
-conn.close()
+# Agora, recrie as tabelas chamando a função
+create_tables()

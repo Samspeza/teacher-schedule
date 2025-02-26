@@ -17,6 +17,7 @@ from UserControl.sidebar import create_sidebar
 class TimetableApp:
     def __init__(self, root):
         self.root = root
+        self.teachers = self.get_teachers()
         self.root.title("Gerenciamento de Grade de Aulas")
         self.root.geometry("900x800")
         self.root.config(bg=BACKGROUND_COLOR)
@@ -203,32 +204,49 @@ class TimetableApp:
         home_root.mainloop()
 
     def generate_timetable(self):
-        timetable = {cls: {day: {time_slot: None for time_slot in time_slots} for day in days_of_week} for cls in classes}
+            timetable = {cls: {day: {time_slot: None for time_slot in time_slots} for day in days_of_week} for cls in classes}
 
-        for cls in classes:
-            for day in days_of_week:
-                previous_teacher = None
-                for i, time_slot in enumerate(time_slots):
-                    available_teachers = [
-                        teacher for teacher in teachers
-                        if teacher not in teacher_limits or len(self.teacher_allocations[teacher]) < teacher_limits.get(teacher, float('inf'))
-                    ]
+            for cls in classes:
+                for day in days_of_week:
+                    previous_teacher = None
+                    for i, time_slot in enumerate(time_slots):
 
-                    if time_slot == "20:25 - 20:45": 
-                        teacher = "INTERVALO"
-                    elif not available_teachers:
-                        teacher = "[SEM PROFESSOR]"
-                    else:
-                        if previous_teacher and previous_teacher in available_teachers and random.random() < 0.2:
-                            teacher = previous_teacher
+                        available_teachers = []
+
+                        for teacher in teachers:
+                            limit = teacher_limits.get(teacher, 0)
+                            allocations = self.teacher_allocations.get(teacher, [])
+
+                            print(f"Professor: {teacher}, Limite: {limit}, Alocações: {allocations}")
+
+                            if limit == 0:
+                                if day in teachers[teacher]:
+                                    available_teachers.append(teacher)
+                            else:
+                                if len(allocations) < limit and day in teachers[teacher]:
+                                    available_teachers.append(teacher)
+
+                        print(f"Professores disponíveis: {available_teachers}")
+
+                        if time_slot == "20:25 - 20:45":
+                            teacher = "INTERVALO"
+                        elif not available_teachers:
+                            teacher = ""
                         else:
-                            teacher = random.choice([t for t in available_teachers if t != previous_teacher] or available_teachers)
+                            if previous_teacher and previous_teacher in available_teachers and random.random() < 0.2:
+                                teacher = previous_teacher
+                            else:
+                                teacher = random.choice([t for t in available_teachers if t != previous_teacher] or available_teachers)
+
+                            if teacher not in self.teacher_allocations:
+                                self.teacher_allocations[teacher] = set()
                             self.teacher_allocations[teacher].add(day)
-                    
-                    timetable[cls][day][time_slot] = teacher
-                    previous_teacher = teacher
-        return timetable
-    
+
+                        timetable[cls][day][time_slot] = teacher
+                        previous_teacher = teacher
+
+            return timetable
+
     def show_timetable(self):
         for widget in self.scroll_frame.winfo_children():
             widget.destroy()
@@ -420,6 +438,14 @@ class TimetableApp:
         save_button = tk.Button(manual_schedule_window, text="Salvar", command=save_manual_schedule)
         save_button.pack(pady=8)
 
+    def get_teachers(self):
+        conn = sqlite3.connect(self.DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, max_days FROM teachers")
+        teachers = cursor.fetchall()
+        conn.close()
+        return teachers
+    
 if __name__ == "__main__":
     root = tk.Tk()
     app = TimetableApp(root)

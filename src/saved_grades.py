@@ -1,14 +1,12 @@
 import sqlite3
 import tkinter as tk
-import os
-from DbContext.database import DB_NAME
-from DbContext.models import create_tables, delete_grade_by_name, delete_grade_from_db, get_grade_by_name, get_saved_grades, save_grade, create_tables
+from DbContext.models import create_tables, delete_grade_by_name, get_grade_by_name, get_saved_grades, save_grade, create_tables
 import tkinter.messagebox as messagebox
-from tkinter import PhotoImage
 from UserControl import config
 from UserControl.sidebar import create_sidebar
 from UserControl.config import days_of_week, time_slots
 import re
+from DbContext.database import DB_NAME
 
 class SavedGradesApp:
     def __init__(self, root):
@@ -112,21 +110,6 @@ class SavedGradesApp:
 
         return timetable
 
-    @staticmethod
-    def parse_grade_contents(line):
-        """Identifica dias e horários da grade"""
-        line = line.strip()
-        if line in ["Segunda:", "Terça:", "Quarta:", "Quinta:", "Sexta:"]:
-            return "DAY", line[:-1]  # Remove o ":" no final
-
-        match = re.match(r"(\d{2}:\d{2} - \d{2}:\d{2}):\s*(.*)", line)
-        if match:
-            time_range = match.group(1)
-            teacher_name = match.group(2).strip()
-            return time_range, teacher_name
-
-        return None
-
     def re_save_grade(self):
         """Salva novamente a grade selecionada"""
         selected_index = self.saved_grades_listbox.curselection()
@@ -168,29 +151,21 @@ class SavedGradesApp:
         conn.close()
         return exists
 
-    import re
-
     @staticmethod
     def parse_grade_contents(line):
-        """
-        Processa cada linha do arquivo de grade de horários e extrai as informações de horários e professores.
-        """
         line = line.strip()
 
-        # Se a linha for um dia da semana, retorna como um marcador
         if line in ["Segunda:", "Terça:", "Quarta:", "Quinta:", "Sexta:"]:
-            return "DAY", line[:-1]  # Remove os ":" e retorna o nome do dia
+            return "DAY", line[:-1]  
 
         if not line or "==============================" in line:
             return None  
 
-        # Expressão para capturar o horário e o professor
         match = re.match(r"(\d{2}:\d{2} - \d{2}:\d{2}):\s*(.*)", line)
         if match:
             time_range = match.group(1)
             teacher_name = match.group(2).strip()
 
-            # Se for intervalo, armazenamos explicitamente
             if teacher_name == "INTERVALO":
                 return time_range, "INTERVALO"
 
@@ -296,8 +271,7 @@ class SavedGradesApp:
             self.save_button.config(state="disabled")
             self.cancel_button.config(state="disabled")
 
-if __name__ == "__main__": 
-    create_tables()  
+if __name__ == "__main__":  
     saved_root = tk.Tk()
     saved_app = SavedGradesApp(saved_root)
     saved_root.mainloop()

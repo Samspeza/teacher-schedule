@@ -1,5 +1,11 @@
 import tkinter as tk
 from saved_grades import SavedGradesApp
+from manageTeachers import ManageTeachersApp
+import sys
+import os
+from DbContext.database import DB_NAME
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'DbContext')))
+
 
 class ScreenManager:
     def __init__(self, root): 
@@ -24,6 +30,9 @@ class ScreenManager:
         
         self.saved_button = tk.Button(central_frame, text="SALVOS", font=("Arial", 16), command=self.open_saved, bg="#2A72C3", fg="white", width=15, height=2)
         self.saved_button.pack(pady=20)
+        
+        self.teachers_button = tk.Button(central_frame, text="CADASTROS", font=("Arial", 16), command=self.open_teachers, bg="#2A72C3", fg="white", width=15, height=2)
+        self.teachers_button.pack(pady=20)
 
     def open_timetable(self):
         """Abre a tela de criação de grade"""
@@ -40,6 +49,13 @@ class ScreenManager:
         saved_root = tk.Tk()
         saved_app = SavedGradesApp(saved_root)
         saved_root.mainloop()
+
+    def open_teachers(self):
+        """Abre a tela de gerenciamento de professores"""
+        self.root.destroy()
+        teachers_root = tk.Tk()
+        teachers_app = ManageTeachersApp(teachers_root)
+        teachers_root.mainloop()
 
 if __name__ == "__main__": 
     root = tk.Tk()
