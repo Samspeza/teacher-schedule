@@ -1,8 +1,11 @@
+import os
 import sqlite3
 
 DB_NAME = "schedule.db"
 
 def create_tables():
+    print(f"Banco de dados sendo criado no diretório: {os.getcwd()}")
+    
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
@@ -83,3 +86,5 @@ def create_tables():
 
     conn.commit()
     conn.close()
+
+create_tables()
