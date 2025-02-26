@@ -1,12 +1,14 @@
 import sqlite3
 import tkinter as tk
-from DbContext.models import create_tables, delete_grade_by_name, get_grade_by_name, get_saved_grades, save_grade, create_tables
 import tkinter.messagebox as messagebox
 from UserControl import config
 from UserControl.sidebar import create_sidebar
 from UserControl.config import days_of_week, time_slots
 import re
-from DbContext.database import DB_NAME
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+from DbContext.models import delete_grade_by_name, get_grade_by_name, get_saved_grades, save_grade
 
 class SavedGradesApp:
     def __init__(self, root):
@@ -53,9 +55,9 @@ class SavedGradesApp:
     def populate_saved_grades(self):
         """Carrega a lista de grades salvas"""
         self.saved_grades_listbox.delete(0, tk.END)
-        saved_grades = get_saved_grades()  # Buscar do banco
+        saved_grades = get_saved_grades()  
         for grade in saved_grades:
-            self.saved_grades_listbox.insert(tk.END, grade[1])  # Exibe apenas o nome da grade
+            self.saved_grades_listbox.insert(tk.END, grade[1]) 
 
     def load_grade(self, event):
         """Exibe os detalhes da grade logo abaixo da opção selecionada"""
@@ -63,7 +65,6 @@ class SavedGradesApp:
         if selected_index:
             selected_grade = self.saved_grades_listbox.get(selected_index)
 
-            # Verifica se a grade já está expandida
             next_index = selected_index[0] + 1
             if self.saved_grades_listbox.get(next_index).startswith("↳"):
                 self.remove_expanded_grade(selected_index[0])
@@ -77,12 +78,11 @@ class SavedGradesApp:
             grade_contents = grade[2].split("\n")
             timetable_class = self.parse_timetable(grade_contents)
 
-            # Insere os detalhes logo abaixo
             for day, schedule in timetable_class.items():
-                self.saved_grades_listbox.insert(next_index, f"↳ {day}")  # Nome do dia
+                self.saved_grades_listbox.insert(next_index, f"↳ {day}")  
                 next_index += 1
                 for time, teacher in schedule.items():
-                    self.saved_grades_listbox.insert(next_index, f"    {time}: {teacher}")  # Aulas
+                    self.saved_grades_listbox.insert(next_index, f"    {time}: {teacher}")  
                     next_index += 1
 
     def remove_expanded_grade(self, index):
@@ -144,6 +144,7 @@ class SavedGradesApp:
 
 
     def teacher_exists(name):
+        from DbContext.database import DB_NAME
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("SELECT 1 FROM teachers WHERE name = ?", (name,))
@@ -182,41 +183,6 @@ class SavedGradesApp:
                 if time_range in slot:
                     return day, slot
         return None, None 
-
-        
-    def load_grade(self, event):
-        """Carrega a grade salva ao dar um duplo clique."""
-        selected_index = self.saved_grades_listbox.curselection()
-        if selected_index:
-            selected_grade = self.saved_grades_listbox.get(selected_index)
-            print(f"Selecionado: {selected_grade}")
-
-            grade = get_grade_by_name(selected_grade)  
-            if not grade:
-                messagebox.showerror("Erro", "Grade não encontrada no banco de dados.")
-                return
-
-            grade_name = grade[1]  
-            grade_contents = grade[2].split("\n")  
-
-            timetable_class = {}
-
-            current_day = None  
-
-            for line in grade_contents:
-                parsed_data = self.parse_grade_contents(line)
-
-                if parsed_data:
-                    if parsed_data[0] == "DAY":  
-                        current_day = parsed_data[1]  
-                        timetable_class[current_day] = {}  
-                    elif current_day and isinstance(parsed_data, tuple):
-                        time_range, teacher_name = parsed_data
-                        timetable_class[current_day][time_range] = teacher_name 
-
-            print(f"Grade gerada: {timetable_class}")  
-            self.generate_grade(grade_name, timetable_class)
-
 
     def generate_grade(self, grade_name, timetable_class):
         frame = tk.Frame(self.root, bg="#F8F8F8", relief="solid", borderwidth=1)
