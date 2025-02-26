@@ -1,6 +1,10 @@
 import sqlite3
 import tkinter as tk
 import tkinter.messagebox as messagebox
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))  
 from UserControl import config
 from UserControl.sidebar import create_sidebar
 from UserControl.config import days_of_week, time_slots

@@ -1,6 +1,6 @@
 import tkinter as tk
-from saved_grades import SavedGradesApp
-from manageTeachers import ManageTeachersApp
+from Pages.saved_grades import SavedGradesApp
+from Pages.manageTeachers import ManageTeachersApp
 import sys
 import os
 from DbContext.database import DB_NAME
@@ -37,7 +37,7 @@ class ScreenManager:
     def open_timetable(self):
         """Abre a tela de criação de grade"""
         self.root.destroy()
-        from teacherschedule import TimetableApp
+        from Pages.teacherschedule import TimetableApp
 
         timetable_root = tk.Tk()
         app = TimetableApp(timetable_root)

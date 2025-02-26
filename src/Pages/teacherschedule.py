@@ -7,6 +7,10 @@ from tkinter import PhotoImage
 from tkinter import filedialog
 from tkinter import messagebox
 from tkinter.messagebox import askyesno
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))  
 from DbContext.database import DB_NAME
 from CSS.style import *
 from UserControl.config import teachers, teacher_limits, classes, days_of_week, time_slots

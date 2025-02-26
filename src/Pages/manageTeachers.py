@@ -1,10 +1,13 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import sqlite3
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))  
 from CSS.style import *
 from UserControl.sidebar import create_sidebar
 from DbContext.database import DB_NAME
-
 
 class ManageTeachersApp:
     def __init__(self, root):

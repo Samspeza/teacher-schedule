@@ -1,6 +1,8 @@
 {
     "python.analysis.extraPaths": [
         "./DbContext",
-        "./src/DbContext"
+        "./src/DbContext",
+        "./src/CSS",
+        "./src/UserControl"
     ]
 }
