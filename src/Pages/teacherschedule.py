@@ -311,35 +311,46 @@ class TimetableApp:
     DB_NAME = "schedule.db"
 
     def download_grade(self):
-        file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt")])
-        if not file_path:
+        if not self.selected_grades:
+            messagebox.showwarning("Aviso", "Nenhuma grade selecionada para download.")
             return
-        
-        grade_content = ""
+
         for grade_name in self.selected_grades:
-            grade_content += f"Grade de {grade_name}\n"
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".txt", 
+                filetypes=[("Text files", "*.txt")],
+                initialfile=f"{grade_name}.txt" 
+            )
+            
+            if not file_path:
+                continue  
+
+            grade_content = f"Grade de {grade_name}\n"
             timetable_class = self.timetable[grade_name]
+            
             for day in days_of_week:
                 grade_content += f"\n{day}:\n"
                 for time_slot in time_slots:
                     teacher = timetable_class[day].get(time_slot, "[SEM PROFESSOR]")
                     grade_content += f"{time_slot}: {teacher}\n"
-            grade_content += "\n" + "="*30 + "\n"
-        
-        with open(file_path, "w") as f:
-            f.write(grade_content)
+            
+            grade_content += "\n" + "=" * 30 + "\n"
+            
+            # Salvar a grade no arquivo
+            with open(file_path, "w") as f:
+                f.write(grade_content)
 
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-
-        for grade_name in self.selected_grades:
+            # Salvar no banco de dados
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
             cursor.execute("""
-            INSERT INTO saved_grades (name, content, file_path)
-            VALUES (?, ?, ?)
+                INSERT INTO saved_grades (name, content, file_path)
+                VALUES (?, ?, ?)
             """, (grade_name, grade_content, file_path))
-        
-        conn.commit()
-        conn.close()
+
+            conn.commit()
+            conn.close()
+
         messagebox.showinfo("Sucesso", "Grade(s) baixada(s) com sucesso e salvas no banco!")
 
 
