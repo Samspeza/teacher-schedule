@@ -83,6 +83,23 @@ def get_teacher_availability_for_timetable(teacher_limits, teachers_data):
 
     return availability_per_teacher
 
+def get_disciplines_for_class(class_name):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+    SELECT d.name 
+    FROM disciplines d
+    JOIN class_disciplines cd ON d.id = cd.discipline_id
+    JOIN classes c ON c.id = cd.class_id
+    WHERE c.name = ?
+    """, (class_name,))
+    
+    disciplines = cursor.fetchall()
+    conn.close()
+
+    return [discipline[0] for discipline in disciplines]
+
 def get_teacher_disciplines():
     teacher_disciplines = {}
     conn = sqlite3.connect(DB_NAME)

@@ -105,7 +105,15 @@ def create_tables():
     );
     """)
 
-        
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS class_disciplines (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_id INTEGER,
+        discipline_id INTEGER,
+        FOREIGN KEY (class_id) REFERENCES classes(id),
+        FOREIGN KEY (discipline_id) REFERENCES disciplines(id)
+    );
+    """)
     conn.commit()
     conn.close()
     

@@ -257,7 +257,7 @@ def create_tables():
     conn.commit()
     conn.close()
 
-def get_teachers(self):
+def get_teachers():
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("SELECT id, name, max_days FROM teachers")
