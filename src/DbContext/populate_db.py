@@ -1,7 +1,7 @@
 import sqlite3
 from database import DB_NAME, create_tables
 from models import (
-    insert_teacher, insert_availability, insert_class, insert_teacher_limit, insert_time_slot, get_teachers, 
+    insert_discipline, insert_teacher, insert_availability, insert_class, insert_teacher_limit, insert_time_slot, get_teachers, 
     clear_teachers, clear_classes, clear_time_slots, clear_availability, reset_ids
 )
 
@@ -33,6 +33,44 @@ teachers = {
     "Joao Marcelo": ["Segunda", "Terça", "Sexta"],
     "Janayna": ["Segunda"]
 }
+
+disciplines = [
+    ("CC1", "AR", "Arquitetura de Redes", 1.5, "T", 5),
+    ("CC1", "CG", "Comp. Gráfica", 1.5, "T", 5),
+    ("CC1", "AC", "Arquitetura de Computadores", 1.5, "T", 5),
+    ("CC1", "LFA", "Ling. Formais e Autom.", 1.5, "T", 5),
+    ("CC1", "IA", "Inteligência Artificial", 3, "T", 5),
+    ("CC1", "SO", "Sistemas Operacionais", 3, "T/P", 5),
+    ("CC1", "LPOO", "Ling. Programação OO", 4.5, "1T/2P", 3),
+    ("CC1", "BD", "Banco de Dados", 4.5, "2T/1P", 3),
+    ("ADS1", "POO", "Programa O.O.", 3, "T/P", 3),
+    ("ADS1", "ESII", "Engenharia de Software II", 3, "T/P", 3),
+    ("ADS1", "BD", "Banco de Dados", 3, "T/P", 3),
+    ("ADS1", "ASOO", "Analise Sistemas O.O.", 3, "T/P", 3),
+    ("ADS1", "IU", "Interface com Usuário", 3, "T/P", 3),
+    ("ADS1", "PLP", "Pensamento Lógico Comp. Python", 3, "T/P", 1),
+    ("ADS1", "IC", "Infraestrutura Computacional", 3, "T", 1),
+    ("ADS1", "TIC", "Tec da Informação e Comunicação", 3, "T", 1),
+    ("ADS1", "MAT", "Matemática e Estatística", 3, "T", 1),
+]
+
+def populate_disciplines():
+    print("Criando tabelas no banco de dados...")
+    create_tables()
+    
+    print("Populando banco de dados com disciplinas...")
+    
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    for course, sigla, name, hours, type_, class_number in disciplines:
+        insert_discipline(course, sigla, name, hours, type_, class_number)
+    
+    conn.commit()
+    conn.close()
+    print("Disciplinas inseridas com sucesso!")
+
+populate_disciplines()
 
 teacher_limits = {"Allan": 3, "Elio": 1}
 
