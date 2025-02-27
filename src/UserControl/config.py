@@ -12,6 +12,27 @@ def get_classes():
     conn.close()
     return [class_[0] for class_ in classes]
 
+def get_disciplines():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT course, sigla, name, hours, type, class_number FROM disciplines")
+    disciplines = cursor.fetchall()
+    conn.close()
+
+    disciplines_data = []
+    for discipline in disciplines:
+        discipline_info = {
+            "course": discipline[0],
+            "sigla": discipline[1],
+            "name": discipline[2],
+            "hours": discipline[3],
+            "type": discipline[4],
+            "class_number": discipline[5]
+        }
+        disciplines_data.append(discipline_info)
+    
+    return disciplines_data
+
 def get_teacher_data():
     teachers_data = {}
     conn = sqlite3.connect(DB_NAME)
@@ -62,6 +83,26 @@ def get_teacher_availability_for_timetable(teacher_limits, teachers_data):
 
     return availability_per_teacher
 
+def get_teacher_disciplines():
+    teacher_disciplines = {}
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT t.name, d.name
+    FROM teachers t
+    JOIN teacher_disciplines td ON t.id = td.teacher_id
+    JOIN disciplines d ON td.discipline_id = d.id
+    """)
+    associations = cursor.fetchall()
+
+    for teacher_name, discipline_name in associations:
+        if teacher_name not in teacher_disciplines:
+            teacher_disciplines[teacher_name] = []
+        teacher_disciplines[teacher_name].append(discipline_name)
+
+    conn.close()
+    return teacher_disciplines
 
 
 days_of_week = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
@@ -73,13 +114,18 @@ time_slots = [
 ]
 
 classes = get_classes()
+disciplines = get_disciplines()
 teachers = get_teacher_data()
 teacher_limits = get_teacher_limits()
+teacher_disciplines = get_teacher_disciplines()
 
 availability_per_teacher = get_teacher_availability_for_timetable(teacher_limits, teachers)
 
+# Exibindo as informações carregadas
 if __name__ == "__main__":
     print("Classes:", classes)
+    print("Disciplines:", disciplines)
     print("Teachers:", teachers)
     print("Teacher Limits:", teacher_limits)
     print("Teacher Availability:", availability_per_teacher)
+    print("Teacher Disciplines:", teacher_disciplines)

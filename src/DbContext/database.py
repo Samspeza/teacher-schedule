@@ -84,7 +84,29 @@ def create_tables():
     );
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS disciplines (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course TEXT NOT NULL,
+        sigla TEXT NOT NULL,
+        name TEXT NOT NULL,
+        hours REAL NOT NULL,
+        type TEXT NOT NULL,
+        class_number INTEGER NOT NULL
+    );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS teacher_disciplines (
+        teacher_id INTEGER,
+        discipline_id INTEGER,
+        FOREIGN KEY (teacher_id) REFERENCES teachers(id),
+        FOREIGN KEY (discipline_id) REFERENCES disciplines(id)
+    );
+    """)
+
+        
     conn.commit()
     conn.close()
-
+    
 create_tables()

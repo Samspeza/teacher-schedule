@@ -7,6 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 from UserControl.sidebar import create_sidebar
 from UserControl.config import days_of_week, time_slots
 import re
+import UserControl.config
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 from DbContext.models import delete_grade_by_name, get_grade_by_name, get_saved_grades, save_grade
 
@@ -182,8 +183,8 @@ class SavedGradesApp:
         """
         Extrai o dia da semana e o horário do intervalo de tempo fornecido.
         """
-        for day in config.days_of_week:
-            for slot in config.time_slots:
+        for day in days_of_week:
+            for slot in time_slots:
                 if time_range in slot:
                     return day, slot
         return None, None 

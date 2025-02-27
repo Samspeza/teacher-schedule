@@ -340,3 +340,15 @@ def insert_teacher_limit(teacher_id, max_days):
     conn.commit()
     conn.close()
 
+def insert_discipline(course, sigla, name, hours, type_, class_number):
+    """Insere uma nova disciplina na tabela de disciplinas"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT INTO disciplines (course, sigla, name, hours, type, class_number)
+    VALUES (?, ?, ?, ?, ?, ?)
+    """, (course, sigla, name, hours, type_, class_number))
+
+    conn.commit()
+    conn.close()
