@@ -11,9 +11,14 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))  
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'DbContext'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'UserControl'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'CSS'))
 from DbContext.database import DB_NAME
+from DbContext.models import get_teachers
 from CSS.style import *
-from UserControl.config import teachers, teacher_limits, classes, days_of_week, time_slots
+from UserControl.config import get_class_course, get_disciplines, teachers, teacher_limits, classes, days_of_week, time_slots
 from ScreenManager import ScreenManager
 from UserControl.sidebar import create_sidebar
 #from UserControl.button_design import create_action_buttons
@@ -192,7 +197,15 @@ class TimetableApp:
             "<Configure>",
             lambda e: self.scroll_canvas.configure(scrollregion=self.scroll_canvas.bbox("all"))
         )
-
+        
+    def get_teachers(self):
+        conn = sqlite3.connect(self.DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, max_days FROM teachers")
+        teachers = cursor.fetchall()
+        conn.close()
+        return teachers
+    
     def show_modules_screen(self):
         """Expande ou recolhe o painel de módulos."""
         if self.modules_frame.winfo_ismapped():
@@ -208,48 +221,69 @@ class TimetableApp:
         home_root.mainloop()
 
     def generate_timetable(self):
-            timetable = {cls: {day: {time_slot: None for time_slot in time_slots} for day in days_of_week} for cls in classes}
+        disciplines = get_disciplines()  
+        teachers = get_teachers() 
 
-            for cls in classes:
-                for day in days_of_week:
-                    previous_teacher = None
-                    for i, time_slot in enumerate(time_slots):
+        timetable = {cls: {day: [['', ''] for _ in time_slots] for day in days_of_week} for cls in classes}
 
-                        available_teachers = []
+        for cls in classes:
+            class_course = get_class_course(cls)  
+            class_disciplines = [d for d in disciplines if d['course'] == class_course]  
 
-                        for teacher in teachers:
-                            limit = teacher_limits.get(teacher, 0)
-                            allocations = self.teacher_allocations.get(teacher, [])
+            discipline_hours = {d['name']: d['hours'] for d in class_disciplines}  
+            assigned_hours = {d['name']: 0 for d in class_disciplines}  
 
-                            print(f"Professor: {teacher}, Limite: {limit}, Alocações: {allocations}")
+            for day in days_of_week:
+                previous_teacher = None
+                for i, time_slot in enumerate(time_slots):
+                    available_teachers = list(teachers)
 
-                            if limit == 0:
-                                if day in teachers[teacher]:
-                                    available_teachers.append(teacher)
-                            else:
-                                if len(allocations) < limit and day in teachers[teacher]:
-                                    available_teachers.append(teacher)
+                    if time_slot == "20:25 - 20:45":  # Intervalo
+                        teacher = "INTERVALO"
+                        discipline = ""
+                    else:
+                        possible_disciplines = [d for d in class_disciplines if assigned_hours[d['name']] < discipline_hours[d['name']]]
 
-                        print(f"Professores disponíveis: {available_teachers}")
-
-                        if time_slot == "20:25 - 20:45":
-                            teacher = "INTERVALO"
-                        elif not available_teachers:
-                            teacher = ""
+                        if possible_disciplines:
+                            discipline_obj = random.choice(possible_disciplines)
+                            discipline = discipline_obj['name']
+                            assigned_hours[discipline] += 1
                         else:
-                            if previous_teacher and previous_teacher in available_teachers and random.random() < 0.2:
-                                teacher = previous_teacher
-                            else:
-                                teacher = random.choice([t for t in available_teachers if t != previous_teacher] or available_teachers)
+                            discipline = None  
 
-                            if teacher not in self.teacher_allocations:
-                                self.teacher_allocations[teacher] = set()
-                            self.teacher_allocations[teacher].add(day)
+                        if available_teachers and discipline:
+                            teacher_tuple = random.choice(available_teachers)
+                            teacher = teacher_tuple[1]
+                        else:
+                            teacher = ""
 
-                        timetable[cls][day][time_slot] = teacher
-                        previous_teacher = teacher
+                        if teacher not in self.teacher_allocations:
+                            self.teacher_allocations[teacher] = set()
+                        self.teacher_allocations[teacher].add(day)
 
-            return timetable
+                    timetable[cls][day][i] = [discipline, teacher]
+                    previous_teacher = teacher
+
+            # Verificação da carga horária distribuída
+            print("\n🔍 Verificação das Horas Alocadas por Disciplina 🔍")
+            for cls in timetable:
+                discipline_count = {}
+
+                for day in timetable[cls]:
+                    for time_slot, (discipline, teacher) in zip(time_slots, timetable[cls][day]):
+                        if discipline and discipline != "INTERVALO":
+                            if discipline not in discipline_count:
+                                discipline_count[discipline] = 0
+                            discipline_count[discipline] += 1
+
+                print(f"\n📌 Turma: {cls}")
+                for discipline, allocated_hours in discipline_count.items():
+                    expected_hours = next(d['hours'] for d in disciplines if d['name'] == discipline)
+                    print(f"  - {discipline}: {allocated_hours} aulas (Esperado: {expected_hours})")
+
+
+        return timetable
+
 
     def show_timetable(self):
         for widget in self.scroll_frame.winfo_children():
@@ -267,30 +301,32 @@ class TimetableApp:
         header = tk.Frame(frame)
         header.grid(row=0, column=0, columnspan=len(days_of_week) + 2, sticky="ew")
         
-        header_label = tk.Label(header, text=f"Grade para {name}", font=HEADER_FONT,
-                                fg=TEXT_COLOR)
+        header_label = tk.Label(header, text=f"Grade para {name}", font=HEADER_FONT, fg=TEXT_COLOR)
         header_label.pack(side="left", padx=10, pady=5)
         
         var = tk.BooleanVar()
         checkbox = tk.Checkbutton(header, variable=var, command=lambda: self.select_grade(name, var))
-
         checkbox.pack(side="right", padx=10, pady=5)
-    
-        tk.Label(frame, text="", font=LABEL_FONT, fg=TEXT_COLOR,
-                relief="ridge", borderwidth=1).grid(row=1, column=0, padx=6, pady=6, sticky="nsew")
+        
+        # Primeira linha de cabeçalhos para os dias da semana
+        tk.Label(frame, text="", font=LABEL_FONT, fg=TEXT_COLOR, relief="ridge", borderwidth=1).grid(row=1, column=0, padx=6, pady=6, sticky="nsew")
         for i, day in enumerate(days_of_week):
-            day_label = tk.Label(frame, text=day, font=LABEL_FONT, fg=TEXT_COLOR,
-                                relief="ridge", borderwidth=1)
+            day_label = tk.Label(frame, text=day, font=LABEL_FONT, fg=TEXT_COLOR, relief="ridge", borderwidth=1)
             day_label.grid(row=1, column=i+1, padx=6, pady=6, sticky="nsew")
         
+        # Adicionando os horários
         for row, time_slot in enumerate(time_slots, start=2):
-            time_label = tk.Label(frame, text=time_slot, font=TIME_SLOT_FONT, bg=LABEL_COLOR, fg=TEXT_COLOR,
-                                relief="ridge", borderwidth=1)
+            time_label = tk.Label(frame, text=time_slot, font=TIME_SLOT_FONT, bg=LABEL_COLOR, fg=TEXT_COLOR, relief="ridge", borderwidth=1)
             time_label.grid(row=row, column=0, padx=10, pady=3, sticky="nsew")
-
+            
+            # Acessando as disciplinas e professores para cada horário
             for col, day in enumerate(days_of_week, start=1):
-                teacher = timetable_class[day].get(time_slot, "[SEM PROFESSOR]")
-                cell_label = tk.Label(frame, text=teacher, font=TEACHER_FONT, bg=WHITE_COLOR, fg=TEXT_COLOR,
+                # Acessando a disciplina e o nome do professor da tupla
+                discipline = timetable_class[day][row - 2][0]  # Disciplina
+                teacher = timetable_class[day][row - 2][1] if timetable_class[day][row - 2][1] else "[SEM PROFESSOR]"  # Nome do professor, ou mensagem caso não tenha professor
+
+                # Exibindo o nome do professor e a disciplina na célula
+                cell_label = tk.Label(frame, text=f"{discipline}\n{teacher}", font=TEACHER_FONT, bg=WHITE_COLOR, fg=TEXT_COLOR,
                                     padx=8, pady=4, relief="groove", borderwidth=1)
                 cell_label.grid(row=row, column=col, padx=6, pady=3, sticky="nsew")
                 cell_label.bind("<Button-1>", lambda e, d=day, t=time_slot, l=cell_label: self.select_cell(d, t, l))
@@ -452,14 +488,6 @@ class TimetableApp:
         
         save_button = tk.Button(manual_schedule_window, text="Salvar", command=save_manual_schedule)
         save_button.pack(pady=8)
-
-    def get_teachers(self):
-        conn = sqlite3.connect(self.DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name, max_days FROM teachers")
-        teachers = cursor.fetchall()
-        conn.close()
-        return teachers
     
 if __name__ == "__main__":
     root = tk.Tk()
