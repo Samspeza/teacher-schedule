@@ -18,7 +18,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'CSS'))
 from DbContext.database import DB_NAME
 from DbContext.models import get_teachers
 from CSS.style import *
-from UserControl.config import get_disciplines, teachers, teacher_limits, classes, days_of_week, time_slots
+from UserControl.config import get_class_course, get_disciplines, teachers, teacher_limits, classes, days_of_week, time_slots
 from ScreenManager import ScreenManager
 from UserControl.sidebar import create_sidebar
 #from UserControl.button_design import create_action_buttons
@@ -222,59 +222,67 @@ class TimetableApp:
 
     def generate_timetable(self):
         disciplines = get_disciplines()  
-        teachers = get_teachers()  
+        teachers = get_teachers() 
 
         timetable = {cls: {day: [['', ''] for _ in time_slots] for day in days_of_week} for cls in classes}
 
-        discipline_hours = {discipline['name']: discipline['hours'] for discipline in disciplines}
-
         for cls in classes:
-            assigned_disciplines = {discipline['name']: 0 for discipline in disciplines}
+            class_course = get_class_course(cls)  
+            class_disciplines = [d for d in disciplines if d['course'] == class_course]  
+
+            discipline_hours = {d['name']: d['hours'] for d in class_disciplines}  
+            assigned_hours = {d['name']: 0 for d in class_disciplines}  
 
             for day in days_of_week:
                 previous_teacher = None
                 for i, time_slot in enumerate(time_slots):
-                    available_teachers = list(teachers) 
-
-                    print(f"Dia: {day}, Horário: {time_slot}")
-                    print(f"Professores disponíveis: {available_teachers}")
+                    available_teachers = list(teachers)
 
                     if time_slot == "20:25 - 20:45":  # Intervalo
                         teacher = "INTERVALO"
                         discipline = ""
-                    elif not available_teachers:  
-                        teacher = ""
-                        discipline = None
                     else:
-                        teacher_tuple = random.choice(available_teachers)  
-                        teacher = teacher_tuple[1] 
+                        possible_disciplines = [d for d in class_disciplines if assigned_hours[d['name']] < discipline_hours[d['name']]]
 
-                        possible_disciplines = [d['name'] for d in disciplines if assigned_disciplines[d['name']] < discipline_hours[d['name']]]
                         if possible_disciplines:
-                            discipline = random.choice(possible_disciplines)
-                            assigned_disciplines[discipline] += 1
+                            discipline_obj = random.choice(possible_disciplines)
+                            discipline = discipline_obj['name']
+                            assigned_hours[discipline] += 1
                         else:
                             discipline = None  
+
+                        if available_teachers and discipline:
+                            teacher_tuple = random.choice(available_teachers)
+                            teacher = teacher_tuple[1]
+                        else:
+                            teacher = ""
 
                         if teacher not in self.teacher_allocations:
                             self.teacher_allocations[teacher] = set()
                         self.teacher_allocations[teacher].add(day)
 
-                    timetable[cls][day][i] = [discipline, teacher] 
+                    timetable[cls][day][i] = [discipline, teacher]
                     previous_teacher = teacher
 
-        for cls in timetable:
-            for day in timetable[cls]:
-                for time_slot, (discipline, teacher) in zip(time_slots, timetable[cls][day]):
-                    if discipline and teacher:
-                        print(f"{discipline}\n{teacher}")  
-                    elif discipline:
-                        print(f"{discipline}\nSem professor")  
-                    elif teacher:
-                        print(f"Sem aula\n{teacher}")  
-                    else:
-                        print("")
-            return timetable
+            # Verificação da carga horária distribuída
+            print("\n🔍 Verificação das Horas Alocadas por Disciplina 🔍")
+            for cls in timetable:
+                discipline_count = {}
+
+                for day in timetable[cls]:
+                    for time_slot, (discipline, teacher) in zip(time_slots, timetable[cls][day]):
+                        if discipline and discipline != "INTERVALO":
+                            if discipline not in discipline_count:
+                                discipline_count[discipline] = 0
+                            discipline_count[discipline] += 1
+
+                print(f"\n📌 Turma: {cls}")
+                for discipline, allocated_hours in discipline_count.items():
+                    expected_hours = next(d['hours'] for d in disciplines if d['name'] == discipline)
+                    print(f"  - {discipline}: {allocated_hours} aulas (Esperado: {expected_hours})")
+
+
+        return timetable
 
 
     def show_timetable(self):

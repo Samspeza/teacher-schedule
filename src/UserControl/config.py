@@ -33,6 +33,20 @@ def get_disciplines():
     
     return disciplines_data
 
+def get_class_course(class_name):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT DISTINCT course FROM disciplines WHERE course = ?
+    """, (class_name,))
+
+    course = cursor.fetchone()
+    conn.close()
+
+    return course[0] if course else None
+
+
 def get_teacher_data():
     teachers_data = {}
     conn = sqlite3.connect(DB_NAME)
