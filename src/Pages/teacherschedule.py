@@ -321,9 +321,8 @@ class TimetableApp:
             
             # Acessando as disciplinas e professores para cada horário
             for col, day in enumerate(days_of_week, start=1):
-                # Acessando a disciplina e o nome do professor da tupla
-                discipline = timetable_class[day][row - 2][0]  # Disciplina
-                teacher = timetable_class[day][row - 2][1] if timetable_class[day][row - 2][1] else "[SEM PROFESSOR]"  # Nome do professor, ou mensagem caso não tenha professor
+                discipline = timetable_class[day][row - 2][0]  
+                teacher = timetable_class[day][row - 2][1] if timetable_class[day][row - 2][1] else "[SEM PROFESSOR]"  
 
                 # Exibindo o nome do professor e a disciplina na célula
                 cell_label = tk.Label(frame, text=f"{discipline}\n{teacher}", font=TEACHER_FONT, bg=WHITE_COLOR, fg=TEXT_COLOR,
@@ -372,11 +371,9 @@ class TimetableApp:
             
             grade_content += "\n" + "=" * 30 + "\n"
             
-            # Salvar a grade no arquivo
             with open(file_path, "w") as f:
                 f.write(grade_content)
 
-            # Salvar no banco de dados
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
             cursor.execute("""
