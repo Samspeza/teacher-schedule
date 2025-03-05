@@ -116,7 +116,7 @@ class TimetableApp:
         self.edit_button = tk.Button(
             self.action_frame,
             image=self.edit_icon,
-            command=self.edit_teacher,
+            command=self.edit_cell,
             state="disabled",
             padx=8,
             pady=4,
@@ -395,61 +395,69 @@ class TimetableApp:
         self.selected_cell = label
         self.selected_cell.config(bg=LABEL_COLOR)
         
-        self.original_teacher = self.selected_cell.cget("text")
+        self.original_teacher = self.selected_cell.cget("text").split("\n")[1]  # Obtendo o professor
+        self.original_discipline = self.selected_cell.cget("text").split("\n")[0]  # Obtendo a disciplina
+        
         self.edit_button.config(state="normal")
         self.save_button.config(state="normal")
         self.cancel_button.config(state="normal")
         self.delete_button.config(state="normal")
 
-    
-    def edit_teacher(self):
+    def edit_cell(self):
         if not self.selected_cell:
             return
         
-        self.original_teacher = self.selected_cell.cget("text") 
-        self.open_teacher_modal()
-    
-    def open_teacher_modal(self):
-        modal_window = tk.Toplevel(self.root)
-        modal_window.title("Escolher Novo Professor")
-        
-        label = tk.Label(modal_window, text="Selecione um novo professor:")
-        label.pack(pady=8)
-        
-        teacher_select = ttk.Combobox(modal_window, values=list(teachers.keys()))  
-        teacher_select.set(self.selected_cell.cget("text"))  
+        self.original_teacher = self.selected_cell.cget("text").split("\n")[1]
+        self.original_discipline = self.selected_cell.cget("text").split("\n")[0]
+        self.open_edit_modal()
 
-        teacher_select.pack(pady=8)
+    def open_edit_modal(self):
+        modal_window = tk.Toplevel(self.root)
+        modal_window.title("Editar Disciplina e Professor")
         
-        def save_teacher():
+        label_discipline = tk.Label(modal_window, text="Selecione uma nova disciplina:")
+        label_discipline.pack(pady=4)
+        
+        discipline_select = ttk.Combobox(modal_window, values=[d['name'] for d in get_disciplines()])
+        discipline_select.set(self.original_discipline)
+        discipline_select.pack(pady=4)
+        
+        label_teacher = tk.Label(modal_window, text="Selecione um novo professor:")
+        label_teacher.pack(pady=4)
+        
+        teacher_select = ttk.Combobox(modal_window, values=list(teachers.keys()))
+        teacher_select.set(self.original_teacher)
+        teacher_select.pack(pady=4)
+        
+        def save_changes():
+            new_discipline = discipline_select.get()
             new_teacher = teacher_select.get()
-            self.selected_cell.config(text=new_teacher)  
+            self.selected_cell.config(text=f"{new_discipline}\n{new_teacher}")
             modal_window.destroy()
-            self.save_button.config(state="disabled")
-            self.cancel_button.config(state="disabled")
+            self.save_button.config(state="normal")
+            self.cancel_button.config(state="normal")
         
         def cancel():
             modal_window.destroy()
-            self.selected_cell.config(text=self.original_teacher)  
         
-        self.save_button.config(command=save_teacher, state="normal")
-        self.cancel_button.config(command=cancel, state="normal")
-    
+        save_button = tk.Button(modal_window, text="Salvar", command=save_changes)
+        save_button.pack(pady=4)
+        
+        cancel_button = tk.Button(modal_window, text="Cancelar", command=cancel)
+        cancel_button.pack(pady=4)
+
     def save_changes(self):
         if self.selected_cell:
-            new_teacher = self.selected_cell.cget("text")  
-            self.selected_cell.config(text=new_teacher) 
-        
             self.save_button.config(state="disabled")
             self.cancel_button.config(state="disabled")
-    
+
     def cancel_edit(self):
         if self.selected_cell:
-            self.selected_cell.config(text=self.original_teacher)  
+            self.selected_cell.config(text=f"{self.original_discipline}\n{self.original_teacher}")
         
         self.save_button.config(state="disabled")
         self.cancel_button.config(state="disabled")
-    
+        
     def confirm_delete_schedule(self):
         if self.selected_cell:
             confirmation = askyesno("Confirmar Exclusão", "Você tem certeza que deseja excluir este registro?")
