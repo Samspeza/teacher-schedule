@@ -164,3 +164,5 @@ def create_action_buttons(action_frame, commands):
         highlightthickness=0,
     )
     download_button.pack(side="left", padx=8)
+
+    

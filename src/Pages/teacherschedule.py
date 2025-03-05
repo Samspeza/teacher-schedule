@@ -262,6 +262,7 @@ class TimetableApp:
                         self.teacher_allocations[teacher].add(day)
 
                     timetable[cls][day][i] = [discipline, teacher]
+                
                     previous_teacher = teacher
 
             # Verificação da carga horária distribuída
@@ -478,7 +479,6 @@ class TimetableApp:
         def save_manual_schedule():
             selected_class = class_select.get()
            
-            
             self.timetable[selected_class]= selected_class
             manual_schedule_window.destroy()
             self.show_timetable()
