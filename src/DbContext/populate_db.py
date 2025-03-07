@@ -5,7 +5,7 @@ from models import (
     clear_teachers, clear_classes, clear_time_slots, clear_availability, reset_ids
 )
 
-classes = [f"CC{i}" for i in range(1, 9)] + [f"ADS{i}" for i in range(1, 5)]
+classes = [f"CC{i}" for i in range(1, 9)] + [f"ADS{i}" for i in range(1, 3)] + ["ADS3P", "ADS3R"] + [f"ADS{i}" for i in range(4, 5)]
 days_of_week = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
 
 time_slots = [
@@ -35,23 +35,65 @@ teachers = {
 }
 
 disciplines = [
-    ("CC1", "AR", "Arquitetura de Redes", 1.5, "T", 5),
-    ("CC1", "CG", "Comp. Gráfica", 1.5, "T", 5),
-    ("CC1", "AC", "Arquitetura de Computadores", 1.5, "T", 5),
-    ("CC1", "LFA", "Ling. Formais e Autom.", 1.5, "T", 5),
-    ("CC1", "IA", "Inteligência Artificial", 3, "T", 5),
-    ("CC1", "SO", "Sistemas Operacionais", 3, "T/P", 5),
-    ("CC1", "LPOO", "Ling. Programação OO", 4.5, "1T/2P", 3),
-    ("CC1", "BD", "Banco de Dados", 4.5, "2T/1P", 3),
-    ("ADS1", "POO", "Programa O.O.", 3, "T/P", 3),
-    ("ADS1", "ESII", "Engenharia de Software II", 3, "T/P", 3),
-    ("ADS1", "BD", "Banco de Dados", 3, "T/P", 3),
-    ("ADS1", "ASOO", "Analise Sistemas O.O.", 3, "T/P", 3),
-    ("ADS1", "IU", "Interface com Usuário", 3, "T/P", 3),
+    ("CC4", "AR", "Arquitetura de Redes", 1.5, "T", 5),
+    ("CC5", "AR", "Arquitetura de Redes", 1.5, "T", 5),
+    ("CC4", "CG", "Comp. Gráfica", 1.5, "T", 5),
+    ("CC5", "CG", "Comp. Gráfica", 1.5, "T", 5),
+    ("CC4", "AC", "Arquitetura de Computadores", 1.5, "T", 5),
+    ("CC5", "AC", "Arquitetura de Computadores", 1.5, "T", 5),
+    ("CC4", "LFA", "Ling. Formais e Autom.", 1.5, "T", 5),
+    ("CC5", "LFA", "Ling. Formais e Autom.", 1.5, "T", 5),
+    ("CC4", "IA", "Inteligência Artificial", 3, "T", 5),
+    ("CC4", "SO", "Sistemas Operacionais", 3, "T/P", 5),
+    ("CC5", "IA", "Inteligência Artificial", 3, "T", 5),
+    ("CC5", "SO", "Sistemas Operacionais", 3, "T/P", 5),
+    ("CC2", "LPOO", "Ling. Programação OO", 4.5, "1T/2P", 3),
+    ("CC2", "BD", "Banco de Dados", 4.5, "2T/1P", 3),
+    ("CC3", "LPOO", "Ling. Programação OO", 4.5, "1T/2P", 3),
+    ("CC3", "BD", "Banco de Dados", 4.5, "2T/1P", 3),
+    ("CC2", "AG", "Álgebra Linear", 1.5, "1T/2P", 3),
+    ("CC3", "AG", "Álgebra Linear", 1.5, "1T/2P", 3),
+    ("CC2", "BD", "Banco de Dados", 4.5, "2T/1P", 3),
+    
+    ("CC6", "AA", "Análise de Algoritmo", 1.5, "1T/2P", 3),
+    ("CC6", "FRV", "Fund. Realidade Virtual / Aum", 3, "1T/2P", 3),
+    ("CC6", "SD", "Sistemas Distribuídos", 3, "1T/2P", 3),
+    ("CC6", "TCI", "TCI", 1.5, "1T/2P", 3),
+    ("CC6", "ES", "Engenharia de Software", 3, "1T/2P", 3),
+    
+    ("CC7", "AA", "Análise de Algoritmo", 1.5, "1T/2P", 3),
+    ("CC7", "FRV", "Fund. Realidade Virtual / Aum", 3, "1T/2P", 3),
+    ("CC7", "SD", "Sistemas Distribuídos", 3, "1T/2P", 3),
+    ("CC7", "TCI", "TCI", 1.5, "1T/2P", 3),
+    ("CC7", "ES", "Engenharia de Software", 3, "1T/2P", 3),
+    
+    ("CC1", "FC", "Física para Computação", 1.5, "1T/2P", 3),
+    ("CC1", "PWR", "Programação Web Responsiva", 1.5, "1T/2P", 3),
+    ("CC1", "ER", "Engenharia de Requisistos", 1.5, "1T/2P", 3),
+    ("CC1", "IHC", "Interface Humano Computador", 1.5, "1T/2P", 3),
+    ("CC1", "DDM", "Des. Dispositivos Móveis", 1.5, "1T/2P", 3),
+    ("CC1", "TMA", "Tópicos de Matemática Aplicada", 1.5, "1T/2P", 3),
+
+    ("ADS3P", "POO", "Programa O.O.", 3, "T/P", 3),
+    ("ADS3P", "ESII", "Engenharia de Software II", 3, "T/P", 3),
+    ("ADS3P", "BD", "Banco de Dados", 3, "T/P", 3),
+    ("ADS3P", "ASOO", "Analise Sistemas O.O.", 3, "T/P", 3),
+    ("ADS3P", "IU", "Interface com Usuário", 3, "T/P", 3),
+    ("ADS3R", "POO", "Programa O.O.", 3, "T/P", 3),
+    ("ADS3R", "ESII", "Engenharia de Software II", 3, "T/P", 3),
+    ("ADS3R", "BD", "Banco de Dados", 3, "T/P", 3),
+    ("ADS3R", "ASOO", "Analise Sistemas O.O.", 3, "T/P", 3),
+    ("ADS3R", "IU", "Interface com Usuário", 3, "T/P", 3),
+
     ("ADS1", "PLP", "Pensamento Lógico Comp. Python", 3, "T/P", 1),
     ("ADS1", "IC", "Infraestrutura Computacional", 3, "T", 1),
     ("ADS1", "TIC", "Tec da Informação e Comunicação", 3, "T", 1),
     ("ADS1", "MAT", "Matemática e Estatística", 3, "T", 1),
+    
+    ("ADS4", "OC", "Organização de Computadores", 3, "T", 1),
+    ("ADS4", "FSO", "Fundamentos SO", 3, "T", 1),
+    ("ADS4", "PSI", "Princípios de SI", 3, "T", 1),
+    
 ]
 
 def populate_disciplines():

@@ -1,0 +1,28 @@
+Grade de CC2
+
+Segunda:
+['Ling. Programação OO', 'Valter']
+['', 'INTERVALO']
+['Ling. Programação OO', 'Lidiana']
+
+Terça:
+['Álgebra Linear', 'Flávio']
+['', 'INTERVALO']
+['Ling. Programação OO', 'Taisa']
+
+Quarta:
+['Ling. Programação OO', 'Diogo']
+['', 'INTERVALO']
+['Banco de Dados', 'Rogerio']
+
+Quinta:
+['Banco de Dados', 'André']
+['', 'INTERVALO']
+['Banco de Dados', 'Flávio']
+
+Sexta:
+['Banco de Dados', 'Flávio']
+['', 'INTERVALO']
+['Álgebra Linear', 'Allan']
+
+==============================
