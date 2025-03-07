@@ -119,26 +119,19 @@ class SavedGradesApp:
         selected_index = self.saved_grades_listbox.curselection()
         if selected_index:
             selected_grade = self.saved_grades_listbox.get(selected_index)  
-            # Extraindo o nome da grade e ID da exibição no Listbox
             parts = selected_grade.split(" - ")
-            file_name = parts[0].strip()  # Nome do arquivo
-            grade_id = parts[1].strip()   # ID da grade
-            grade_name = parts[2].strip() # Nome da grade
-
-            # Buscar a grade no banco de dados usando o ID
+            file_name = parts[0].strip()  
+            grade_id = parts[1].strip()  
+            grade_name = parts[2].strip()
             grade = get_grade_by_id(grade_id)
             
             if grade:
-                grade_name = grade[1]  # Nome da grade
-                grade_contents = grade[2]  # Conteúdo da grade
+                grade_name = grade[1]  
+                grade_contents = grade[2]
 
-                # Salvar novamente a grade com o nome correto (sem caminho)
                 save_grade(grade_name, grade_contents)
 
-                # Recarregar as grades salvas e exibir o mesmo nome na lista
                 self.populate_saved_grades()
-
-                # Exibir a mensagem de sucesso
                 messagebox.showinfo("Sucesso", f"Grade '{grade_name}' salva novamente!")
 
             else:
@@ -149,16 +142,14 @@ class SavedGradesApp:
         selected_index = self.saved_grades_listbox.curselection()
         if selected_index:
             selected_grade = self.saved_grades_listbox.get(selected_index)
-            # Extraindo ID da grade da exibição
             parts = selected_grade.split(" - ")
-            grade_id = parts[1].strip()  # ID da grade que será usado para excluir a grade
+            grade_id = parts[1].strip() 
 
             confirm = messagebox.askyesno("Confirmar", f"Tem certeza que deseja excluir a grade '{selected_grade}'?")
             if confirm:
                 try:
-                    # Deletar a grade usando o ID extraído
                     delete_grade_by_id(grade_id)
-                    self.populate_saved_grades()  # Recarregar as grades no Listbox
+                    self.populate_saved_grades()  
                     messagebox.showinfo("Sucesso", f"Grade '{selected_grade}' deletada com sucesso!")
                 except Exception as e:
                     messagebox.showerror("Erro", f"Erro ao deletar a grade '{selected_grade}': {e}")
@@ -166,8 +157,6 @@ class SavedGradesApp:
                 messagebox.showinfo("Cancelado", "A exclusão foi cancelada.")
         else:
             messagebox.showwarning("Seleção inválida", "Selecione uma grade para deletar.")
-
-
 
     def teacher_exists(name):
         from DbContext.database import DB_NAME
