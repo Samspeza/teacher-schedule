@@ -355,23 +355,34 @@ class TimetableApp:
             file_path = filedialog.asksaveasfilename(
                 defaultextension=".txt", 
                 filetypes=[("Text files", "*.txt")],
-                initialfile=f"{grade_name}.txt" 
+                initialfile=f"{grade_name}.txt"
             )
-            
+
             if not file_path:
                 continue  
 
+            timetable_class = self.timetable.get(grade_name, {})
+
+            print(f"📌 Baixando grade: {grade_name}")
+            print(timetable_class)
+
             grade_content = f"Grade de {grade_name}\n"
-            timetable_class = self.timetable[grade_name]
-            
+
             for day in days_of_week:
                 grade_content += f"\n{day}:\n"
-                for time_slot in time_slots:
-                    teacher = timetable_class[day].get(time_slot, "[SEM PROFESSOR]")
-                    grade_content += f"{time_slot}: {teacher}\n"
-            
+                schedule = timetable_class.get(day, {})
+
+                if isinstance(schedule, dict):
+                    for time_slot, teacher in schedule.items():
+                        grade_content += f"{time_slot}: {teacher}\n"
+                elif isinstance(schedule, list):
+                    for entry in schedule:
+                        grade_content += f"{entry}\n"
+
             grade_content += "\n" + "=" * 30 + "\n"
-            
+
+            print("📌 Dados salvos no arquivo:\n", grade_content)  
+
             with open(file_path, "w") as f:
                 f.write(grade_content)
 
@@ -387,7 +398,6 @@ class TimetableApp:
 
         messagebox.showinfo("Sucesso", "Grade(s) baixada(s) com sucesso e salvas no banco!")
 
-
     def select_cell(self, day, time_slot, label):
         if self.selected_cell:
             self.selected_cell.config(bg=WHITE_COLOR)
@@ -395,13 +405,15 @@ class TimetableApp:
         self.selected_cell = label
         self.selected_cell.config(bg=LABEL_COLOR)
         
-        self.original_teacher = self.selected_cell.cget("text").split("\n")[1]  # Obtendo o professor
-        self.original_discipline = self.selected_cell.cget("text").split("\n")[0]  # Obtendo a disciplina
+        text = self.selected_cell.cget("text")
+        self.original_discipline = text.split("\n")[0]  
+        self.original_teacher = text.split("\n")[1]   
         
         self.edit_button.config(state="normal")
         self.save_button.config(state="normal")
         self.cancel_button.config(state="normal")
         self.delete_button.config(state="normal")
+
 
     def edit_cell(self):
         if not self.selected_cell:
@@ -433,13 +445,17 @@ class TimetableApp:
             new_discipline = discipline_select.get()
             new_teacher = teacher_select.get()
             self.selected_cell.config(text=f"{new_discipline}\n{new_teacher}")
+            
+            self.original_discipline = new_discipline
+            self.original_teacher = new_teacher
+            
             modal_window.destroy()
-            self.save_button.config(state="normal")
-            self.cancel_button.config(state="normal")
-        
+            self.save_button.config(state="disabled")
+            self.cancel_button.config(state="disabled")
+
         def cancel():
             modal_window.destroy()
-        
+
         save_button = tk.Button(modal_window, text="Salvar", command=save_changes)
         save_button.pack(pady=4)
         

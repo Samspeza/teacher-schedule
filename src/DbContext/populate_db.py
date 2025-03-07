@@ -84,10 +84,12 @@ disciplines = [
     ("ADS3R", "BD", "Banco de Dados", 3, "T/P", 3),
     ("ADS3R", "ASOO", "Analise Sistemas O.O.", 3, "T/P", 3),
     ("ADS3R", "IU", "Interface com Usuário", 3, "T/P", 3),
+
     ("ADS1", "PLP", "Pensamento Lógico Comp. Python", 3, "T/P", 1),
     ("ADS1", "IC", "Infraestrutura Computacional", 3, "T", 1),
     ("ADS1", "TIC", "Tec da Informação e Comunicação", 3, "T", 1),
     ("ADS1", "MAT", "Matemática e Estatística", 3, "T", 1),
+    
     ("ADS4", "OC", "Organização de Computadores", 3, "T", 1),
     ("ADS4", "FSO", "Fundamentos SO", 3, "T", 1),
     ("ADS4", "PSI", "Princípios de SI", 3, "T", 1),

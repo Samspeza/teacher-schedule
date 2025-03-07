@@ -9,7 +9,7 @@ from UserControl.config import days_of_week, time_slots
 import re
 import UserControl.config
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
-from DbContext.models import delete_grade_by_name, get_grade_by_name, get_saved_grades, save_grade
+from DbContext.models import delete_grade_by_name, get_grade_by_id, get_grade_by_name, get_saved_grades, save_grade
 
 class SavedGradesApp:
     def __init__(self, root):
@@ -58,28 +58,28 @@ class SavedGradesApp:
         self.saved_grades_listbox.delete(0, tk.END)
         saved_grades = get_saved_grades()  
         for grade in saved_grades:
-            
-            file_name = grade[3].split("/")[-1] 
-            self.saved_grades_listbox.insert(tk.END, f"{file_name} - {grade[1]}")
+            file_name = grade[3].split("/")[-1]  
+            self.saved_grades_listbox.insert(tk.END, f"{file_name} - {grade[0]} - {grade[1]}")  
 
     def load_grade(self, event):
         """Exibe os detalhes da grade logo abaixo da opção selecionada"""
         selected_index = self.saved_grades_listbox.curselection()
         if selected_index:
             selected_grade = self.saved_grades_listbox.get(selected_index)
-            grade_name = selected_grade.split(" - ")[-1]
+            grade_id = selected_grade.split(" - ")[1]  
+            print(f"Grade ID: {grade_id}") 
 
             next_index = selected_index[0] + 1
             if self.saved_grades_listbox.get(next_index).startswith("↳"):
                 self.remove_expanded_grade(selected_index[0])
                 return
 
-            grade = get_grade_by_name(grade_name) 
+            grade = get_grade_by_id(grade_id)  
             if not grade:
                 messagebox.showerror("Erro", "Grade não encontrada no banco de dados.")
                 return
 
-            grade_contents = grade[2].split("\n")
+            grade_contents = grade[2].split("\n")  
             timetable_class = self.parse_timetable(grade_contents)
 
             for day, schedule in timetable_class.items():
@@ -88,7 +88,6 @@ class SavedGradesApp:
                 for time, teacher in schedule.items():
                     self.saved_grades_listbox.insert(next_index, f"    {time}: {teacher}")  
                     next_index += 1
-
 
     def remove_expanded_grade(self, index):
         """Remove os detalhes da grade quando já estiverem abertos"""

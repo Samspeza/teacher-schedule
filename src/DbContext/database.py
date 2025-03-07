@@ -56,18 +56,6 @@ def create_tables():
     """)
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        action TEXT NOT NULL,
-        table_name TEXT NOT NULL,
-        old_value TEXT,
-        new_value TEXT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        user TEXT NOT NULL
-    );
-    """)
-
-    cursor.execute("""
     CREATE TABLE IF NOT EXISTS saved_grades (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -105,15 +93,6 @@ def create_tables():
     );
     """)
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS class_disciplines (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        class_id INTEGER,
-        discipline_id INTEGER,
-        FOREIGN KEY (class_id) REFERENCES classes(id),
-        FOREIGN KEY (discipline_id) REFERENCES disciplines(id)
-    );
-    """)
     conn.commit()
     conn.close()
     
