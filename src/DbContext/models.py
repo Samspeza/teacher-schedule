@@ -254,6 +254,15 @@ def delete_grade_by_name(grade_name):
         conn.commit()
     conn.close()
 
+def delete_grade_by_id(grade_id):
+    """Deleta a grade do banco de dados usando o ID."""
+    # Exemplo de comando SQL para deletar a grade pelo ID
+    conn = sqlite3.connect('schedule.db')
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM saved_grades WHERE id = ?", (grade_id,))
+    conn.commit()
+    conn.close()
+
 
 def create_tables():
     conn = sqlite3.connect(DB_NAME)

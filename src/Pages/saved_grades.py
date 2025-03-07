@@ -9,7 +9,7 @@ from UserControl.config import days_of_week, time_slots
 import re
 import UserControl.config
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
-from DbContext.models import delete_grade_by_name, get_grade_by_id, get_grade_by_name, get_saved_grades, save_grade
+from DbContext.models import delete_grade_by_id, delete_grade_by_name, get_grade_by_id, get_grade_by_name, get_saved_grades, save_grade
 
 class SavedGradesApp:
     def __init__(self, root):
@@ -149,11 +149,16 @@ class SavedGradesApp:
         selected_index = self.saved_grades_listbox.curselection()
         if selected_index:
             selected_grade = self.saved_grades_listbox.get(selected_index)
+            # Extraindo ID da grade da exibição
+            parts = selected_grade.split(" - ")
+            grade_id = parts[1].strip()  # ID da grade que será usado para excluir a grade
+
             confirm = messagebox.askyesno("Confirmar", f"Tem certeza que deseja excluir a grade '{selected_grade}'?")
             if confirm:
                 try:
-                    delete_grade_by_name(selected_grade)
-                    self.populate_saved_grades()
+                    # Deletar a grade usando o ID extraído
+                    delete_grade_by_id(grade_id)
+                    self.populate_saved_grades()  # Recarregar as grades no Listbox
                     messagebox.showinfo("Sucesso", f"Grade '{selected_grade}' deletada com sucesso!")
                 except Exception as e:
                     messagebox.showerror("Erro", f"Erro ao deletar a grade '{selected_grade}': {e}")
@@ -161,6 +166,7 @@ class SavedGradesApp:
                 messagebox.showinfo("Cancelado", "A exclusão foi cancelada.")
         else:
             messagebox.showwarning("Seleção inválida", "Selecione uma grade para deletar.")
+
 
 
     def teacher_exists(name):
