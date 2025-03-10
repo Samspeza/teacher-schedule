@@ -1,5 +1,6 @@
 import sqlite3
 import tkinter as tk
+from tkinter import filedialog
 import tkinter.messagebox as messagebox
 import sys
 import os
@@ -7,9 +8,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 from UserControl.sidebar import create_sidebar
 from UserControl.config import days_of_week, time_slots
 import re
-import UserControl.config
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
-from DbContext.models import delete_grade_by_id, delete_grade_by_name, get_grade_by_id, get_grade_by_name, get_saved_grades, save_grade
+from DbContext.models import delete_grade_by_id, get_grade_by_id, get_saved_grades, save_grade
 
 class SavedGradesApp:
     def __init__(self, root):
@@ -80,6 +80,7 @@ class SavedGradesApp:
                 return
 
             grade_contents = grade[2].split("\n")  
+            print(grade_contents)
             timetable_class = self.parse_timetable(grade_contents)
 
             for day, schedule in timetable_class.items():
@@ -113,52 +114,90 @@ class SavedGradesApp:
                     timetable[current_day][time_range] = teacher_name
 
         return timetable
+    
+    def download_grade(self, grade_id):
+        """
+        Faz o download da grade correspondente ao ID e permite ao usuário salvar no computador.
+        """
+        from database import DB_NAME
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
 
+        cursor.execute("SELECT name, content, file_path FROM saved_grades WHERE id = ?", (grade_id,))
+        grade = cursor.fetchone()
+        conn.close()
+
+        if not grade:
+            messagebox.showerror("Erro", "Grade não encontrada para download.")
+            return
+
+        grade_name, grade_content, saved_file_path = grade
+
+        file_name = os.path.basename(saved_file_path)
+
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".txt", 
+            filetypes=[("Text files", "*.txt")],
+            initialfile=file_name
+        )
+
+        if not file_path:
+            return None  
+
+        with open(file_path, "w") as f:
+            f.write(grade_content)
+
+        messagebox.showinfo("Sucesso", f"Grade '{file_name}' baixada e salva com sucesso!")
+        return grade_content  
+
+        
     def re_save_grade(self):
-        """Salva novamente a grade selecionada"""
+        """Baixa novamente a grade selecionada"""
         selected_index = self.saved_grades_listbox.curselection()
         if selected_index:
             selected_grade = self.saved_grades_listbox.get(selected_index)  
-            # Extraindo o nome da grade e ID da exibição no Listbox
             parts = selected_grade.split(" - ")
-            file_name = parts[0].strip()  # Nome do arquivo
-            grade_id = parts[1].strip()   # ID da grade
-            grade_name = parts[2].strip() # Nome da grade
 
-            # Buscar a grade no banco de dados usando o ID
+            if len(parts) < 3:
+                messagebox.showerror("Erro", "Formato inesperado da grade selecionada.")
+                return
+
+            grade_id = parts[1].strip()  
+            grade_name = parts[2].strip()  
+
             grade = get_grade_by_id(grade_id)
+
+            if not grade:
+                messagebox.showerror("Erro", "Grade não encontrada no servidor para baixar novamente.")
+                return
+
+            if len(grade) < 4:
+                messagebox.showerror("Erro", "Dados da grade estão incompletos.")
+                return
+
+            saved_file_path = grade[3]  
+            grade_contents = self.download_grade(grade_id)  
+
+            if not grade_contents:
+                messagebox.showerror("Erro", "Erro ao baixar a grade. Tente novamente.")
+                return
             
-            if grade:
-                grade_name = grade[1]  # Nome da grade
-                grade_contents = grade[2]  # Conteúdo da grade
+            messagebox.showinfo("Sucesso", f"Grade '{grade_name}' baixada e salva novamente no seu computador!")
 
-                # Salvar novamente a grade com o nome correto (sem caminho)
-                save_grade(grade_name, grade_contents)
-
-                # Recarregar as grades salvas e exibir o mesmo nome na lista
-                self.populate_saved_grades()
-
-                # Exibir a mensagem de sucesso
-                messagebox.showinfo("Sucesso", f"Grade '{grade_name}' salva novamente!")
-
-            else:
-                messagebox.showerror("Erro", "Grade não encontrada para re-salvar.")
 
     def delete_grade(self):
         """Deleta a grade selecionada e atualiza a tela."""
         selected_index = self.saved_grades_listbox.curselection()
         if selected_index:
             selected_grade = self.saved_grades_listbox.get(selected_index)
-            # Extraindo ID da grade da exibição
             parts = selected_grade.split(" - ")
-            grade_id = parts[1].strip()  # ID da grade que será usado para excluir a grade
+            grade_id = parts[1].strip() 
 
             confirm = messagebox.askyesno("Confirmar", f"Tem certeza que deseja excluir a grade '{selected_grade}'?")
             if confirm:
                 try:
-                    # Deletar a grade usando o ID extraído
                     delete_grade_by_id(grade_id)
-                    self.populate_saved_grades()  # Recarregar as grades no Listbox
+                    self.populate_saved_grades()  
                     messagebox.showinfo("Sucesso", f"Grade '{selected_grade}' deletada com sucesso!")
                 except Exception as e:
                     messagebox.showerror("Erro", f"Erro ao deletar a grade '{selected_grade}': {e}")
@@ -166,8 +205,6 @@ class SavedGradesApp:
                 messagebox.showinfo("Cancelado", "A exclusão foi cancelada.")
         else:
             messagebox.showwarning("Seleção inválida", "Selecione uma grade para deletar.")
-
-
 
     def teacher_exists(name):
         from DbContext.database import DB_NAME
