@@ -80,6 +80,7 @@ class SavedGradesApp:
                 return
 
             grade_contents = grade[2].split("\n")  
+            print(grade_contents)
             timetable_class = self.parse_timetable(grade_contents)
 
             for day, schedule in timetable_class.items():
