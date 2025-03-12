@@ -18,7 +18,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'CSS'))
 from DbContext.database import DB_NAME
 from DbContext.models import get_teachers
 from CSS.style import *
-from UserControl.config import get_class_course, get_disciplines, teachers, teacher_limits, classes, days_of_week, time_slots
+from UserControl.config import get_class_course, get_disciplines, get_teacher_availability_for_timetable, get_teacher_data, get_teacher_limits, teachers, teacher_limits, classes, days_of_week, time_slots
 from ScreenManager import ScreenManager
 from UserControl.sidebar import create_sidebar
 #from UserControl.button_design import create_action_buttons
@@ -221,47 +221,55 @@ class TimetableApp:
         home_root.mainloop()
 
     def generate_timetable(self):
-        disciplines = get_disciplines()
-        teachers = get_teachers()
+        disciplines = get_disciplines()  
+        teachers = get_teacher_data() 
+        teacher_limits = get_teacher_limits()
         
-        timetable = {cls: {day: {time_slot: {'discipline': '', 'teacher': ''} for time_slot in time_slots} for day in days_of_week} for cls in classes}
+        timetable = {cls: {day: [['', ''] for _ in time_slots] for day in days_of_week} for cls in classes}
+
+        # Carregar dados de disponibilidade dos professores com base em limites
+        availability_per_teacher = get_teacher_availability_for_timetable(teacher_limits, teachers)
 
         for cls in classes:
-            class_course = get_class_course(cls)
-            class_disciplines = [d for d in disciplines if d['course'] == class_course]
+            class_course = get_class_course(cls)  
+            class_disciplines = [d for d in disciplines if d['course'] == class_course]  
 
-            discipline_hours = {d['name']: d['hours'] for d in class_disciplines}
-            assigned_hours = {d['name']: 0 for d in class_disciplines}
+            discipline_hours = {d['name']: d['hours'] for d in class_disciplines}  
+            assigned_hours = {d['name']: 0 for d in class_disciplines}  
 
             for day in days_of_week:
                 previous_teacher = None
-                for time_slot in time_slots:
+                for i, time_slot in enumerate(time_slots):
                     available_teachers = list(teachers)
-                    
+
                     if time_slot == "20:25 - 20:45":  # Intervalo
                         teacher = "INTERVALO"
                         discipline = ""
                     else:
                         possible_disciplines = [d for d in class_disciplines if assigned_hours[d['name']] < discipline_hours[d['name']]]
-                        
+
                         if possible_disciplines:
                             discipline_obj = random.choice(possible_disciplines)
                             discipline = discipline_obj['name']
                             assigned_hours[discipline] += 1
                         else:
-                            discipline = None
-                        
-                        if available_teachers and discipline:
-                            teacher_tuple = random.choice(available_teachers)
-                            teacher = teacher_tuple[1]
+                            discipline = None  
+
+                        # Filtrar professores por disponibilidade para o dia
+                        available_teachers_for_day = [teacher for teacher in available_teachers if day in availability_per_teacher.get(teacher, [])]
+
+                        # Selecionar aleatoriamente um professor disponível
+                        if available_teachers_for_day and discipline:
+                            teacher = random.choice(available_teachers_for_day)
                         else:
                             teacher = ""
 
                         if teacher not in self.teacher_allocations:
                             self.teacher_allocations[teacher] = set()
                         self.teacher_allocations[teacher].add(day)
+
+                    timetable[cls][day][i] = [discipline, teacher]
                     
-                    timetable[cls][day][time_slot] = {'discipline': discipline, 'teacher': teacher}
                     previous_teacher = teacher
 
             # Verificação da carga horária distribuída
@@ -270,8 +278,7 @@ class TimetableApp:
                 discipline_count = {}
 
                 for day in timetable[cls]:
-                    for time_slot, details in timetable[cls][day].items():
-                        discipline = details['discipline']
+                    for time_slot, (discipline, teacher) in zip(time_slots, timetable[cls][day]):
                         if discipline and discipline != "INTERVALO":
                             if discipline not in discipline_count:
                                 discipline_count[discipline] = 0
@@ -283,6 +290,8 @@ class TimetableApp:
                     print(f"  - {discipline}: {allocated_hours} aulas (Esperado: {expected_hours})")
 
         return timetable
+
+
 
     def show_timetable(self):
         for widget in self.scroll_frame.winfo_children():
@@ -313,16 +322,16 @@ class TimetableApp:
             day_label = tk.Label(frame, text=day, font=LABEL_FONT, fg=TEXT_COLOR, relief="ridge", borderwidth=1)
             day_label.grid(row=1, column=i+1, padx=6, pady=6, sticky="nsew")
         
+        # Adicionando os horários
         for row, time_slot in enumerate(time_slots, start=2):
             time_label = tk.Label(frame, text=time_slot, font=TIME_SLOT_FONT, bg=LABEL_COLOR, fg=TEXT_COLOR, relief="ridge", borderwidth=1)
             time_label.grid(row=row, column=0, padx=10, pady=3, sticky="nsew")
             
             # Acessando as disciplinas e professores para cada horário
             for col, day in enumerate(days_of_week, start=1):
-                discipline_info = timetable_class.get(day, {}).get(time_slots[row - 2], {'[SEM DISCIPLINA]', '[SEM PROFESSOR]'})
-                discipline = discipline_info['discipline']
-                teacher = discipline_info['teacher']
-                
+                discipline = timetable_class[day][row - 2][0]  
+                teacher = timetable_class[day][row - 2][1] if timetable_class[day][row - 2][1] else "[SEM PROFESSOR]"  
+
                 # Exibindo o nome do professor e a disciplina na célula
                 cell_label = tk.Label(frame, text=f"{discipline}\n{teacher}", font=TEACHER_FONT, bg=WHITE_COLOR, fg=TEXT_COLOR,
                                     padx=8, pady=4, relief="groove", borderwidth=1)

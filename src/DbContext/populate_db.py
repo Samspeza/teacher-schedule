@@ -67,6 +67,11 @@ disciplines = [
     ("CC7", "TCI", "TCI", 1.5, "1T/2P", 3),
     ("CC7", "ES", "Engenharia de Software", 3, "1T/2P", 3),
     
+    ("CC8", "TCII", "TCII", 1.5, "1T/2P", 3),
+    ("CC8", "QS", "Qualidade de Software", 3, "1T/2P", 3),
+    ("CC8", "SD", "Sistemas Distribuídos", 3, "1T/2P", 3),
+    ("CC8", "OS", "Orientação Estágio", 1, "1T/2P", 3),
+
     ("CC1", "FC", "Física para Computação", 1.5, "1T/2P", 3),
     ("CC1", "PWR", "Programação Web Responsiva", 1.5, "1T/2P", 3),
     ("CC1", "ER", "Engenharia de Requisistos", 1.5, "1T/2P", 3),
