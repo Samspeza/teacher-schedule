@@ -291,8 +291,6 @@ class TimetableApp:
 
         return timetable
 
-
-
     def show_timetable(self):
         for widget in self.scroll_frame.winfo_children():
             widget.destroy()
