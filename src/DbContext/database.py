@@ -10,11 +10,31 @@ def create_tables():
     cursor = conn.cursor()
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS coordinators (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        course TEXT NOT NULL
+    );
+    """)
+    
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS teachers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        max_days INTEGER
+        coordinator_id INTEGER,
+        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS availability (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        teacher_id INTEGER NOT NULL,
+        available_days TEXT NOT NULL,
+        coordinator_id INTEGER NOT NULL,
+        FOREIGN KEY (teacher_id) REFERENCES teachers(id),
+        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
+    )
     """)
 
     cursor.execute("""
@@ -23,8 +43,10 @@ def create_tables():
         teacher_id INTEGER,
         day TEXT NOT NULL,
         time_slot_id INTEGER,
+        coordinator_id INTEGER,
         FOREIGN KEY (teacher_id) REFERENCES teachers(id),
-        FOREIGN KEY (time_slot_id) REFERENCES time_slots(id)
+        FOREIGN KEY (time_slot_id) REFERENCES time_slots(id),
+        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
     """)
 
@@ -35,10 +57,13 @@ def create_tables():
     );
     """)
 
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS classes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL
+        name TEXT NOT NULL,
+        coordinator_id INTEGER,
+        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
     """)
 
@@ -49,9 +74,11 @@ def create_tables():
         class_id INTEGER,
         day TEXT NOT NULL,
         time_slot_id INTEGER,
+        coordinator_id INTEGER,
         FOREIGN KEY (teacher_id) REFERENCES teachers(id),
         FOREIGN KEY (class_id) REFERENCES classes(id),
-        FOREIGN KEY (time_slot_id) REFERENCES time_slots(id)
+        FOREIGN KEY (time_slot_id) REFERENCES time_slots(id),
+        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
     """)
 
@@ -60,7 +87,9 @@ def create_tables():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         content TEXT NOT NULL,
-        file_path TEXT
+        file_path TEXT,
+        coordinator_id INTEGER,
+        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
     """)
 
@@ -68,7 +97,9 @@ def create_tables():
     CREATE TABLE IF NOT EXISTS teacher_limits (
         teacher_id INTEGER,
         max_days INTEGER, 
-        FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+        coordinator_id INTEGER,
+        FOREIGN KEY (teacher_id) REFERENCES teachers(id),
+        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
     """)
 
@@ -80,7 +111,9 @@ def create_tables():
         name TEXT NOT NULL,
         hours REAL NOT NULL,
         type TEXT NOT NULL,
-        class_number INTEGER NOT NULL
+        class_number INTEGER NOT NULL,
+        coordinator_id INTEGER,
+        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
     """)
 
@@ -88,11 +121,13 @@ def create_tables():
     CREATE TABLE IF NOT EXISTS teacher_disciplines (
         teacher_id INTEGER,
         discipline_id INTEGER,
+        coordinator_id INTEGER,
         FOREIGN KEY (teacher_id) REFERENCES teachers(id),
-        FOREIGN KEY (discipline_id) REFERENCES disciplines(id)
+        FOREIGN KEY (discipline_id) REFERENCES disciplines(id),
+        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
     """)
-
+    
     conn.commit()
     conn.close()
     
