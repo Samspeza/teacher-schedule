@@ -37,7 +37,6 @@ def create_tables():
     )
     """)
 
-
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS teacher_availability (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

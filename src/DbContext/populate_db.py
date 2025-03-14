@@ -151,7 +151,6 @@ teacher_limits = {
     "Janayna": 1
 }
 
-
 def populate_database():
     print("Criando tabelas no banco de dados...")
     create_tables()
