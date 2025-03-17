@@ -13,6 +13,8 @@ def create_tables():
     CREATE TABLE IF NOT EXISTS coordinators (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        password TEXT NOT NULL,
         course TEXT NOT NULL
     );
     """)

@@ -113,6 +113,10 @@ class_coordinator = {
     "ADS1": 2, "ADS2": 2, "ADS3P": 2, "ADS3R": 2, "ADS4": 2
 }
 
+for teacher_name, data in teachers.items():
+    print(f"Verificando dados para {teacher_name}: {data}")
+
+
 def populate_disciplines():
     print("Criando tabelas no banco de dados...")
     create_tables()
