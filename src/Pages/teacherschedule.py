@@ -201,10 +201,11 @@ class TimetableApp:
     def get_teachers(self):
         conn = sqlite3.connect(self.DB_NAME)
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name, max_days FROM teachers")
+        cursor.execute("SELECT id, name, coordinator_id FROM teachers")
         teachers = cursor.fetchall()
         conn.close()
         return teachers
+    print(teachers)
     
     def show_modules_screen(self):
         """Expande ou recolhe o painel de módulos."""
