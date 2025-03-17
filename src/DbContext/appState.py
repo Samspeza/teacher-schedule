@@ -7,9 +7,10 @@ class AppState:
     def get_teachers(self):
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name, max_days FROM teachers")
+        cursor.execute("SELECT id, name, coordinator_id FROM teachers")
         teachers = cursor.fetchall()
         conn.close()
+        print(teachers)
         return teachers
-
+        
 app_state = AppState()  

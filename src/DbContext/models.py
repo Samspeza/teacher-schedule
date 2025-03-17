@@ -343,9 +343,10 @@ def insert_availability(teacher_id, available_days, coordinator_id):
     
     for day in available_days:
         cursor.execute("""
-            INSERT INTO availability (teacher_id, available_days, coordinator_id)
+            INSERT INTO teacher_availability (teacher_id, day, coordinator_id)
             VALUES (?, ?, ?)
-        """, (teacher_id, day, coordinator_id))  # Insert each day as a separate record
+        """, (teacher_id, day, coordinator_id))
+
     conn.commit()
     conn.close()
 

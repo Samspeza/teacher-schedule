@@ -11,8 +11,8 @@ from models import insert_teacher, insert_availability, get_teachers, get_teache
 def main():
     create_tables()
     for teacher_name, available_days in teachers.items():
-        max_days = teacher_limits.get(teacher_name, None)
-        teacher_id = insert_teacher(teacher_name, max_days=max_days)
+      
+        teacher_id = insert_teacher(teacher_name)
         print(f"Professor {teacher_name} inserido com ID: {teacher_id}")
 
         insert_availability(teacher_id, available_days)
