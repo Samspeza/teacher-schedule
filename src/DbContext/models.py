@@ -202,13 +202,19 @@ def save_grade(name, contents, coordinator_id):
     conn.close()
 
 def get_saved_grades(coordinator_id):
-    """Recupera todas as grades salvas filtrando pelo coordenador"""
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM saved_grades WHERE coordinator_id = ?", (coordinator_id,))
-    result = cursor.fetchall()
-    conn.close()
-    return result
+    """Retorna as grades salvas do banco de dados com base no coordinator_id"""
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT * FROM saved_grades WHERE coordinator_id = ?
+        """, (coordinator_id,))
+        saved_grades = cursor.fetchall()
+        conn.close()
+        return saved_grades
+    except Exception as e:
+        print(f"Erro ao buscar grades: {e}")
+        return []
 
 def get_grade_by_name(grade_name, coordinator_id):
     """Recupera a grade salva pelo nome filtrando pelo coordenador"""

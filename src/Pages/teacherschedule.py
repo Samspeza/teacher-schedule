@@ -398,9 +398,9 @@ class TimetableApp:
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO saved_grades (name, content, file_path)
-                VALUES (?, ?, ?)
-            """, (grade_name, grade_content, file_path))
+            INSERT INTO saved_grades (name, content, file_path, coordinator_id)
+            VALUES (?, ?, ?, ?)
+            """, (grade_name, grade_content, file_path, self.coordinator_id))
 
             conn.commit()
             conn.close()

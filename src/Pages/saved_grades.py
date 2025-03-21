@@ -57,16 +57,24 @@ class SavedGradesApp:
     def populate_saved_grades(self):
         """Carrega a lista de grades salvas filtradas por coordinator_id"""
         self.saved_grades_listbox.delete(0, tk.END)
-        saved_grades = self.get_saved_grades_by_coordinator(self.coordinator_id)  
+        saved_grades = self.get_saved_grades_by_coordinator(self.coordinator_id)
         for grade in saved_grades:
-            file_name = grade[3].split("/")[-1]  
-            self.saved_grades_listbox.insert(tk.END, f"{file_name} - {grade[0]} - {grade[1]}")  
+            file_name = grade[3].split("/")[-1]
+            self.saved_grades_listbox.insert(tk.END, f"{file_name} - {grade[0]} - {grade[1]}")
 
     def get_saved_grades_by_coordinator(self, coordinator_id):
         """Retorna as grades salvas filtradas pelo coordinator_id"""
-        saved_grades = get_saved_grades(self.coordinator_id)  
-        filtered_grades = [grade for grade in saved_grades if grade[2] == coordinator_id]  
+        saved_grades = get_saved_grades(coordinator_id)  
+        filtered_grades = [grade for grade in saved_grades if grade[4] == coordinator_id]
         return filtered_grades
+    
+    def get_grade_by_id_and_coordinator(self, grade_id, coordinator_id):
+        """Retorna a grade filtrada pelo ID e pelo coordenador"""
+        grade = get_grade_by_id(grade_id, coordinator_id)
+        if grade and grade[4] == coordinator_id:  
+            return grade
+        return None
+
 
     def load_grade(self, event):
         """Exibe os detalhes da grade logo abaixo da opção selecionada, filtrando por coordenador"""
@@ -96,13 +104,6 @@ class SavedGradesApp:
                 for time, teacher in schedule.items():
                     self.saved_grades_listbox.insert(next_index, f"    {time}: {teacher}")  
                     next_index += 1
-
-    def get_grade_by_id_and_coordinator(self, grade_id, coordinator_id):
-        """Retorna a grade filtrada pelo ID e pelo coordenador"""
-        grade = get_grade_by_id(grade_id)
-        if grade and grade[2] == coordinator_id:  
-            return grade
-        return None
 
     def remove_expanded_grade(self, index):
         """Remove os detalhes da grade quando já estiverem abertos"""
@@ -179,7 +180,7 @@ class SavedGradesApp:
             grade_id = parts[1].strip()  
             grade_name = parts[2].strip()  
 
-            grade = get_grade_by_id(grade_id)
+            grade = get_grade_by_id(grade_id, self.coordinator_id)
 
             if not grade:
                 messagebox.showerror("Erro", "Grade não encontrada no servidor para baixar novamente.")
