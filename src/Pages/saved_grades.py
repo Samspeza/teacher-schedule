@@ -12,8 +12,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 from DbContext.models import delete_grade_by_id, get_grade_by_id, get_saved_grades, save_grade
 
 class SavedGradesApp:
-    def __init__(self, root):
+    def __init__(self, root, coordinator_id):
         self.root = root
+        self.coordinator_id = coordinator_id
         self.root.title("Grades Salvas")
         self.root.geometry("900x800")
         self.root.configure(bg="#F8F8F8")
@@ -54,15 +55,21 @@ class SavedGradesApp:
         self.populate_saved_grades()
 
     def populate_saved_grades(self):
-        """Carrega a lista de grades salvas"""
+        """Carrega a lista de grades salvas filtradas por coordinator_id"""
         self.saved_grades_listbox.delete(0, tk.END)
-        saved_grades = get_saved_grades()  
+        saved_grades = self.get_saved_grades_by_coordinator(self.coordinator_id)  
         for grade in saved_grades:
             file_name = grade[3].split("/")[-1]  
             self.saved_grades_listbox.insert(tk.END, f"{file_name} - {grade[0]} - {grade[1]}")  
 
+    def get_saved_grades_by_coordinator(self, coordinator_id):
+        """Retorna as grades salvas filtradas pelo coordinator_id"""
+        saved_grades = get_saved_grades(self.coordinator_id)  
+        filtered_grades = [grade for grade in saved_grades if grade[2] == coordinator_id]  
+        return filtered_grades
+
     def load_grade(self, event):
-        """Exibe os detalhes da grade logo abaixo da opção selecionada"""
+        """Exibe os detalhes da grade logo abaixo da opção selecionada, filtrando por coordenador"""
         selected_index = self.saved_grades_listbox.curselection()
         if selected_index:
             selected_grade = self.saved_grades_listbox.get(selected_index)
@@ -74,9 +81,9 @@ class SavedGradesApp:
                 self.remove_expanded_grade(selected_index[0])
                 return
 
-            grade = get_grade_by_id(grade_id)  
+            grade = self.get_grade_by_id_and_coordinator(grade_id, self.coordinator_id)  
             if not grade:
-                messagebox.showerror("Erro", "Grade não encontrada no banco de dados.")
+                messagebox.showerror("Erro", "Grade não encontrada no banco de dados ou não pertence ao coordenador.")
                 return
 
             grade_contents = grade[2].split("\n")  
@@ -89,6 +96,13 @@ class SavedGradesApp:
                 for time, teacher in schedule.items():
                     self.saved_grades_listbox.insert(next_index, f"    {time}: {teacher}")  
                     next_index += 1
+
+    def get_grade_by_id_and_coordinator(self, grade_id, coordinator_id):
+        """Retorna a grade filtrada pelo ID e pelo coordenador"""
+        grade = get_grade_by_id(grade_id)
+        if grade and grade[2] == coordinator_id:  
+            return grade
+        return None
 
     def remove_expanded_grade(self, index):
         """Remove os detalhes da grade quando já estiverem abertos"""
@@ -282,7 +296,7 @@ class SavedGradesApp:
         from ScreenManager import ScreenManager  
         self.root.destroy()
         home_root = tk.Tk()
-        app = ScreenManager(home_root)
+        app = ScreenManager(home_root, self.coordinator_id)
         home_root.mainloop()
 
     def show_modules_screen(self):

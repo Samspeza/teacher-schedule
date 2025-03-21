@@ -18,21 +18,23 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'CSS'))
 from DbContext.database import DB_NAME
 from DbContext.models import get_teachers
 from CSS.style import *
-from UserControl.config import get_class_course, get_disciplines, get_teacher_availability_for_timetable, get_teacher_data, get_teacher_limits, teachers, teacher_limits, classes, days_of_week, time_slots
+from UserControl.config import get_class_course, get_disciplines, get_teacher_availability_for_timetable, get_teacher_data, get_teacher_limits,  coordinator_id, teachers, teacher_limits, classes, days_of_week, time_slots
 from ScreenManager import ScreenManager
 from UserControl.sidebar import create_sidebar
 #from UserControl.button_design import create_action_buttons
 
 class TimetableApp:
-    def __init__(self, root):
+    def __init__(self, root, coordinator_id):
         self.root = root
-        self.teachers = self.get_teachers()
+        self.coordinator_id = coordinator_id
+        self.teachers = self.get_teachers(self.coordinator_id)
         self.root.title("Gerenciamento de Grade de Aulas")
         self.root.geometry("900x800")
         self.root.config(bg=BACKGROUND_COLOR)
         self.selected_cell = None
-        self.teacher_allocations = {teacher: set() for teacher in teachers}
         self.selected_grades = []
+
+        self.teacher_allocations = {teacher: set() for teacher in self.teachers}
 
         self.main_frame = tk.Frame(self.root, bg=BACKGROUND_COLOR)
         self.main_frame.pack(fill="both", expand=True)
@@ -198,15 +200,16 @@ class TimetableApp:
             lambda e: self.scroll_canvas.configure(scrollregion=self.scroll_canvas.bbox("all"))
         )
         
-    def get_teachers(self):
+    def get_teachers(self, coordinator_id):
+
         conn = sqlite3.connect(self.DB_NAME)
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name, coordinator_id FROM teachers")
+        cursor.execute("SELECT id, name, coordinator_id FROM teachers WHERE coordinator_id = ?", (coordinator_id,))
+        
         teachers = cursor.fetchall()
         conn.close()
         return teachers
-    print(teachers)
-    
+
     def show_modules_screen(self):
         """Expande ou recolhe o painel de módulos."""
         if self.modules_frame.winfo_ismapped():
@@ -218,37 +221,60 @@ class TimetableApp:
         """Retorna à tela inicial."""
         self.root.destroy()
         home_root = tk.Tk()
-        app = ScreenManager(home_root)
+        app = ScreenManager(home_root, self.coordinator_id)
         home_root.mainloop()
 
-    def generate_timetable(self):
-        disciplines = get_disciplines()  
-        teachers = get_teacher_data() 
-        teacher_limits = get_teacher_limits()
+    def get_coordinator_info(self):
+        """Recupera informações do coordenador com base no ID"""
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT course FROM coordinators WHERE id = ?", (self.coordinator_id,))
+        course = cursor.fetchone()
+        conn.close()
+        return course[0] if course else None
+    
+    def get_filtered_classes(self):
+        """Retorna apenas as turmas associadas ao coordenador logado."""
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
         
+        cursor.execute("SELECT name FROM classes WHERE coordinator_id = ?", (self.coordinator_id,))
+        classes = [row[0] for row in cursor.fetchall()]
+        
+        conn.close()
+        return classes
+
+    def generate_timetable(self):
+        """Gera o horário apenas para turmas do curso do coordenador."""
+        disciplines = get_disciplines(self.coordinator_id)
+        teachers = get_teacher_data(self.coordinator_id)  
+        teacher_limits = get_teacher_limits(self.coordinator_id)
+        
+        classes = self.get_filtered_classes()
+        if not classes:
+            print("⚠️ Nenhuma turma encontrada para este coordenador.")
+            return {}
+
         timetable = {cls: {day: [['', ''] for _ in time_slots] for day in days_of_week} for cls in classes}
 
-        # Carregar dados de disponibilidade dos professores com base em limites
         availability_per_teacher = get_teacher_availability_for_timetable(teacher_limits, teachers)
 
         for cls in classes:
-            class_course = get_class_course(cls)  
+            class_course = get_class_course(cls, self.coordinator_id)  
             class_disciplines = [d for d in disciplines if d['course'] == class_course]  
 
             discipline_hours = {d['name']: d['hours'] for d in class_disciplines}  
             assigned_hours = {d['name']: 0 for d in class_disciplines}  
 
             for day in days_of_week:
-                previous_teacher = None
                 for i, time_slot in enumerate(time_slots):
                     available_teachers = list(teachers)
 
-                    if time_slot == "20:25 - 20:45":  # Intervalo
+                    if time_slot == "20:25 - 20:45":  
                         teacher = "INTERVALO"
                         discipline = ""
                     else:
                         possible_disciplines = [d for d in class_disciplines if assigned_hours[d['name']] < discipline_hours[d['name']]]
-
                         if possible_disciplines:
                             discipline_obj = random.choice(possible_disciplines)
                             discipline = discipline_obj['name']
@@ -256,39 +282,16 @@ class TimetableApp:
                         else:
                             discipline = None  
 
-                        # Filtrar professores por disponibilidade para o dia
                         available_teachers_for_day = [teacher for teacher in available_teachers if day in availability_per_teacher.get(teacher, [])]
 
-                        # Selecionar aleatoriamente um professor disponível
                         if available_teachers_for_day and discipline:
                             teacher = random.choice(available_teachers_for_day)
                         else:
                             teacher = ""
 
-                        if teacher not in self.teacher_allocations:
-                            self.teacher_allocations[teacher] = set()
-                        self.teacher_allocations[teacher].add(day)
+                        self.teacher_allocations.setdefault(teacher, set()).add(day)
 
                     timetable[cls][day][i] = [discipline, teacher]
-                    
-                    previous_teacher = teacher
-
-            # Verificação da carga horária distribuída
-            print("\n🔍 Verificação das Horas Alocadas por Disciplina 🔍")
-            for cls in timetable:
-                discipline_count = {}
-
-                for day in timetable[cls]:
-                    for time_slot, (discipline, teacher) in zip(time_slots, timetable[cls][day]):
-                        if discipline and discipline != "INTERVALO":
-                            if discipline not in discipline_count:
-                                discipline_count[discipline] = 0
-                            discipline_count[discipline] += 1
-
-                print(f"\n📌 Turma: {cls}")
-                for discipline, allocated_hours in discipline_count.items():
-                    expected_hours = next(d['hours'] for d in disciplines if d['name'] == discipline)
-                    print(f"  - {discipline}: {allocated_hours} aulas (Esperado: {expected_hours})")
 
         return timetable
 
@@ -436,7 +439,7 @@ class TimetableApp:
         label_discipline = tk.Label(modal_window, text="Selecione uma nova disciplina:")
         label_discipline.pack(pady=4)
         
-        discipline_select = ttk.Combobox(modal_window, values=[d['name'] for d in get_disciplines()])
+        discipline_select = ttk.Combobox(modal_window, values=[d['name'] for d in get_disciplines(self.coordinator_id)])
         discipline_select.set(self.original_discipline)
         discipline_select.pack(pady=4)
         

@@ -6,10 +6,11 @@ import os
 from DbContext.database import DB_NAME
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'DbContext')))
 
-
 class ScreenManager:
-    def __init__(self, root): 
+    def __init__(self, root, coordinator_id): 
         self.root = root
+        self.coordinator_id = coordinator_id  
+        
         self.root.title("Módulo Menu")
         self.root.geometry("900x800")
         self.root.configure(bg="#F8F8F8")
@@ -34,20 +35,26 @@ class ScreenManager:
         self.teachers_button = tk.Button(central_frame, text="CADASTROS", font=("Arial", 16), command=self.open_teachers, bg="#2A72C3", fg="white", width=15, height=2)
         self.teachers_button.pack(pady=20)
 
+    def show_timetable_screen(self):
+        """Exibe a tela do horário do coordenador"""
+        from Pages.teacherschedule import TimetableApp
+        self.clear_screen()
+        self.timetable_app = TimetableApp(self.root, self.coordinator_id)  
+
     def open_timetable(self):
         """Abre a tela de criação de grade"""
         self.root.destroy()
         from Pages.teacherschedule import TimetableApp
 
         timetable_root = tk.Tk()
-        app = TimetableApp(timetable_root)
+        app = TimetableApp(timetable_root, self.coordinator_id)  
         timetable_root.mainloop()
 
     def open_saved(self):
         """Abre a tela de grades salvas"""
         self.root.destroy()
         saved_root = tk.Tk()
-        saved_app = SavedGradesApp(saved_root)
+        saved_app = SavedGradesApp(saved_root, self.coordinator_id)
         saved_root.mainloop()
 
     def open_teachers(self):

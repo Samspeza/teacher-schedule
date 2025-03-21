@@ -47,18 +47,20 @@ class LoginScreen:
         
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM coordinators WHERE email=? AND password=?", (email, password))
+        cursor.execute("SELECT id FROM coordinators WHERE email=? AND password=?", (email, password))
         user = cursor.fetchone()
         conn.close()
         
         if user:
+            coordinator_id = user[0]
+            print(f"DEBUG: ID do coordenador obtido: {coordinator_id}")  
             self.root.destroy()
             main_root = tk.Tk()
-            app = ScreenManager(main_root)
+            app = ScreenManager(main_root, coordinator_id) 
             main_root.mainloop()
         else:
             messagebox.showerror("Erro", "Email ou senha incorretos!")
-    
+
     def open_register(self):
         """Abre a janela de cadastro de coordenador."""
         register_window = tk.Toplevel(self.root)
