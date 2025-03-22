@@ -209,7 +209,6 @@ def login(username, password):
         print("Falha no login!")
         return False
 
-# Função de login
 def login(username, password):
     global coordinator_id
     coordinator_id = get_coordinator_id_from_db(username, password)
