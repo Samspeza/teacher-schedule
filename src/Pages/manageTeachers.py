@@ -114,7 +114,15 @@ class ManageTeachersApp:
     def add_teacher(self, name, max_days):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO teachers (name, max_days, coordinator_id) VALUES (?, ?)", (name, max_days, self.coordinator_id))
+
+        cursor.execute("INSERT INTO teachers (name, coordinator_id) VALUES (?, ?)", 
+                    (name, self.coordinator_id))
+        
+        teacher_id = cursor.lastrowid  
+
+        cursor.execute("INSERT INTO teacher_limits (teacher_id, max_days, coordinator_id) VALUES (?, ?, ?)", 
+                    (teacher_id, max_days, self.coordinator_id))
+
         conn.commit()
         conn.close()
         self.load_teachers()
@@ -122,8 +130,13 @@ class ManageTeachersApp:
     def update_teacher(self, teacher_id, name, max_days):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        cursor.execute("UPDATE teachers SET name = ?, max_days = ? WHERE id = ? AND coordinator_id = ?", 
-                    (name, max_days, teacher_id, self.coordinator_id)) 
+
+        cursor.execute("UPDATE teachers SET name = ? WHERE id = ? AND coordinator_id = ?", 
+                    (name, teacher_id, self.coordinator_id))
+
+        cursor.execute("UPDATE teacher_limits SET max_days = ? WHERE teacher_id = ?",
+                    (max_days, teacher_id))
+
         conn.commit()
         conn.close()
         self.load_teachers()
@@ -131,18 +144,22 @@ class ManageTeachersApp:
     def delete_teacher(self, teacher_id):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM teacher_limits WHERE teacher_id = ?", (teacher_id,))
+
+        cursor.execute("DELETE FROM availability WHERE teacher_id = ?", (teacher_id,))
+
         cursor.execute("DELETE FROM teachers WHERE id = ? AND coordinator_id = ?", 
                     (teacher_id, self.coordinator_id))
+
         conn.commit()
         conn.close()
         self.load_teachers()
 
     def load_teachers(self):
-        # Limpa a tabela existente
         for row in self.tree.get_children():
             self.tree.delete(row)
 
-        # Consulta ao banco de dados para obter os dados dos professores
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("""
@@ -161,8 +178,6 @@ class ManageTeachersApp:
             teacher_id, name, max_days, coordinator_name = teacher
             availability = self.get_teacher_availability(teacher_id, self.coordinator_id)
             self.tree.insert("", "end", values=(teacher_id, name, availability, max_days, coordinator_name))
-
-
 
     def open_teacher_form(self):
         form = tk.Toplevel(self.root)
@@ -208,7 +223,7 @@ class ManageTeachersApp:
         teacher_id = self.tree.item(selected[0], "values")[0]
         name = self.tree.item(selected[0], "values")[1]
         max_days = self.tree.item(selected[0], "values")[3]
-        current_availability = self.get_teacher_availability(teacher_id).split(", ")
+        current_availability = self.get_teacher_availability(teacher_id, self.coordinator_id).split(", ")
 
         form = tk.Toplevel(self.root)
         form.title("Editar Professor")
