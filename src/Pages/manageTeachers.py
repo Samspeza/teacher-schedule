@@ -10,16 +10,18 @@ from UserControl.sidebar import create_sidebar
 from DbContext.database import DB_NAME
 
 class ManageTeachersApp:
-    def __init__(self, root):
+    def __init__(self, root, coordinator_id):
         self.root = root
+        self.coordinator_id = coordinator_id
         self.root.title("Gerenciamento de Professores")
         self.root.geometry("600x400")
 
-        self.tree = ttk.Treeview(self.root, columns=("ID", "Nome", "Disponibilidade", "Máx. Dias"), show="headings")
+        self.tree = ttk.Treeview(self.root, columns=("ID", "Nome", "Disponibilidade", "Máx. Dias", "Coordenador"), show="headings")
         self.tree.heading("ID", text="ID")
         self.tree.heading("Nome", text="Nome")
         self.tree.heading("Disponibilidade", text="Disponibilidade")
         self.tree.heading("Máx. Dias", text="Máx. Dias")
+        self.tree.heading("Coordenador", text="Coordenador")
         self.tree.pack(fill=tk.BOTH, expand=True)
 
         tk.Button(self.root, text="Adicionar", command=self.open_teacher_form).pack(side=tk.LEFT, padx=10)
@@ -56,7 +58,7 @@ class ManageTeachersApp:
         """Abre a tela de gerenciamento de professores"""
         self.root.destroy()
         teachers_root = tk.Tk()
-        teachers_app = ManageTeachersApp(teachers_root)
+        teachers_app = ManageTeachersApp(teachers_root, self.coordinator_id)
         teachers_root.mainloop()
         self.restart_main_screen()
 
@@ -64,22 +66,26 @@ class ManageTeachersApp:
         """Reabre a tela principal para atualizar as informações"""
         from ScreenManager import ScreenManager
         main_root = tk.Tk()
-        app = ScreenManager(main_root)
+        app = ScreenManager(main_root, self.coordinator_id)
         main_root.mainloop()
 
-
-    def get_teachers(self):
+    def get_teachers(self, coordinator_id):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name, max_days FROM teachers")
+        cursor.execute("SELECT id, name FROM teachers WHERE coordinator_id = ?", (coordinator_id,))
         teachers = cursor.fetchall()
         conn.close()
         return teachers
 
-    def get_teacher_availability(self, teacher_id):
+    def get_teacher_availability(self, teacher_id, coordinator_id):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        cursor.execute("SELECT day FROM teacher_availability WHERE teacher_id = ?", (teacher_id,))
+        cursor.execute("""
+            SELECT ta.day 
+            FROM teacher_availability ta
+            JOIN teachers t ON ta.teacher_id = t.id
+            WHERE ta.teacher_id = ? AND t.coordinator_id = ?
+        """, (teacher_id, coordinator_id))
         availability = [row[0] for row in cursor.fetchall()]
         conn.close()
         return ", ".join(availability)
@@ -87,7 +93,7 @@ class ManageTeachersApp:
     def add_teacher(self, name, max_days):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO teachers (name, max_days) VALUES (?, ?)", (name, max_days))
+        cursor.execute("INSERT INTO teachers (name, max_days, coordinator_id) VALUES (?, ?)", (name, max_days, self.coordinator_id))
         conn.commit()
         conn.close()
         self.load_teachers()
@@ -95,7 +101,8 @@ class ManageTeachersApp:
     def update_teacher(self, teacher_id, name, max_days):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        cursor.execute("UPDATE teachers SET name = ?, max_days = ? WHERE id = ?", (name, max_days, teacher_id))
+        cursor.execute("UPDATE teachers SET name = ?, max_days = ? WHERE id = ? AND coordinator_id = ?", 
+                    (name, max_days, teacher_id, self.coordinator_id)) 
         conn.commit()
         conn.close()
         self.load_teachers()
@@ -103,7 +110,8 @@ class ManageTeachersApp:
     def delete_teacher(self, teacher_id):
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM teachers WHERE id = ?", (teacher_id,))
+        cursor.execute("DELETE FROM teachers WHERE id = ? AND coordinator_id = ?", 
+                    (teacher_id, self.coordinator_id))
         conn.commit()
         conn.close()
         self.load_teachers()
@@ -112,10 +120,10 @@ class ManageTeachersApp:
         for row in self.tree.get_children():
             self.tree.delete(row)
         
-        for teacher in self.get_teachers():
-            teacher_id, name, max_days = teacher
-            availability = self.get_teacher_availability(teacher_id)
-            self.tree.insert("", "end", values=(teacher_id, name, availability, max_days if max_days else "-"))
+        for teacher in self.get_teachers(self.coordinator_id): 
+            teacher_id, name = teacher
+            availability = self.get_teacher_availability(teacher_id, self.coordinator_id)
+            self.tree.insert("", "end", values=(teacher_id, name, availability))
 
     def open_teacher_form(self):
         form = tk.Toplevel(self.root)
@@ -206,8 +214,9 @@ class ManageTeachersApp:
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         
-        cursor.execute("DELETE FROM teacher_availability WHERE teacher_id = ?", (teacher_id,))
-        
+        cursor.execute("DELETE FROM teacher_availability WHERE teacher_id = ? AND teacher_id IN (SELECT id FROM teachers WHERE coordinator_id = ?)", 
+                    (teacher_id, self.coordinator_id))
+
         for day in availability:
             cursor.execute("INSERT INTO teacher_availability (teacher_id, day) VALUES (?, ?)", (teacher_id, day))
 

@@ -61,7 +61,7 @@ class ScreenManager:
         """Abre a tela de gerenciamento de professores"""
         self.root.destroy()
         teachers_root = tk.Tk()
-        teachers_app = ManageTeachersApp(teachers_root)
+        teachers_app = ManageTeachersApp(teachers_root, self.coordinator_id)
         teachers_root.mainloop()
 
 if __name__ == "__main__": 
