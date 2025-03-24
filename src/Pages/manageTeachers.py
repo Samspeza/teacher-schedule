@@ -17,12 +17,21 @@ class ManageTeachersApp:
         self.root.geometry("600x400")
 
         self.tree = ttk.Treeview(self.root, columns=("ID", "Nome", "Disponibilidade", "Máx. Dias", "Coordenador"), show="headings")
+
         self.tree.heading("ID", text="ID")
         self.tree.heading("Nome", text="Nome")
         self.tree.heading("Disponibilidade", text="Disponibilidade")
         self.tree.heading("Máx. Dias", text="Máx. Dias")
         self.tree.heading("Coordenador", text="Coordenador")
+
+        self.tree.column("ID", width=50)
+        self.tree.column("Nome", width=150)
+        self.tree.column("Disponibilidade", width=100)
+        self.tree.column("Máx. Dias", width=100)
+        self.tree.column("Coordenador", width=150)
+
         self.tree.pack(fill=tk.BOTH, expand=True)
+
 
         tk.Button(self.root, text="Adicionar", command=self.open_teacher_form).pack(side=tk.LEFT, padx=10)
         tk.Button(self.root, text="Editar", command=self.on_update).pack(side=tk.LEFT, padx=10)
@@ -76,6 +85,18 @@ class ManageTeachersApp:
         teachers = cursor.fetchall()
         conn.close()
         return teachers
+    
+    def get_teacher_limits(self, teacher_id, coordinator_id):
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT max_days 
+            FROM teacher_limits 
+            WHERE teacher_id = ? AND coordinator_id = ?
+        """, (teacher_id, coordinator_id))
+        result = cursor.fetchone()
+        conn.close()
+        return result[0] if result else None
 
     def get_teacher_availability(self, teacher_id, coordinator_id):
         conn = sqlite3.connect(DB_NAME)
@@ -117,13 +138,31 @@ class ManageTeachersApp:
         self.load_teachers()
 
     def load_teachers(self):
+        # Limpa a tabela existente
         for row in self.tree.get_children():
             self.tree.delete(row)
+
+        # Consulta ao banco de dados para obter os dados dos professores
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT DISTINCT t.id, t.name, tl.max_days, c.name
+            FROM teachers t
+            LEFT JOIN teacher_limits tl ON t.id = tl.teacher_id
+            LEFT JOIN coordinators c ON tl.coordinator_id = c.id
+            WHERE t.coordinator_id = ?
+        """, (self.coordinator_id,))
+
         
-        for teacher in self.get_teachers(self.coordinator_id): 
-            teacher_id, name = teacher
+        teachers = cursor.fetchall()
+        conn.close()
+
+        for teacher in teachers: 
+            teacher_id, name, max_days, coordinator_name = teacher
             availability = self.get_teacher_availability(teacher_id, self.coordinator_id)
-            self.tree.insert("", "end", values=(teacher_id, name, availability))
+            self.tree.insert("", "end", values=(teacher_id, name, availability, max_days, coordinator_name))
+
+
 
     def open_teacher_form(self):
         form = tk.Toplevel(self.root)
