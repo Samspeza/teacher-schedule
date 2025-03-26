@@ -1,4 +1,5 @@
 import tkinter as tk
+from Pages.manageDisciplines import ManageSubjectsApp
 from Pages.saved_grades import SavedGradesApp
 from Pages.manageTeachers import ManageTeachersApp
 import sys
@@ -35,6 +36,9 @@ class ScreenManager:
         self.teachers_button = tk.Button(central_frame, text="CADASTROS", font=("Arial", 16), command=self.open_teachers, bg="#2A72C3", fg="white", width=15, height=2)
         self.teachers_button.pack(pady=20)
 
+        self.subjects_button = tk.Button(central_frame, text="CADASTRAR DISCIPLINA", font=("Arial", 16), command=self.open_subjects, bg="#2A72C3", fg="white", width=20, height=2)
+        self.subjects_button.pack(pady=20)
+
     def show_timetable_screen(self):
         """Exibe a tela do horário do coordenador"""
         from Pages.teacherschedule import TimetableApp
@@ -63,6 +67,13 @@ class ScreenManager:
         teachers_root = tk.Tk()
         teachers_app = ManageTeachersApp(teachers_root, self.coordinator_id)
         teachers_root.mainloop()
+
+    def open_subjects(self):
+        """Abre a tela de cadastro de disciplinas"""
+        self.root.destroy()
+        subjects_root = tk.Tk()
+        subjects_app = ManageSubjectsApp(subjects_root, self.coordinator_id) 
+        subjects_root.mainloop()
 
 if __name__ == "__main__": 
     root = tk.Tk()
