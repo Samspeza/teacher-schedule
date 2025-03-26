@@ -370,7 +370,7 @@ class TimetableApp:
             if not file_path:
                 continue  
 
-            timetable_class = self.timetable.get(grade_name, {})  # Pegamos a versão atualizada da grade
+            timetable_class = self.timetable.get(grade_name, {})  
 
             print(f"📌 Baixando grade: {grade_name}")
             print(timetable_class)
@@ -387,29 +387,29 @@ class TimetableApp:
 
                 if isinstance(schedule, list):
                     for i, entry in enumerate(schedule):
-                        if i < len(time_slots):  # Garante que há um horário correspondente
+                        if i < len(time_slots): 
                             time_slot = time_slots[i]
                             discipline, teacher = entry
                             
-                            # Se a disciplina estiver vazia, colocar "-" para indicar que é intervalo
+                           
                             if not discipline:
                                 discipline = "-"
                             
                             grade_content += f"{time_slot}: {discipline} - {teacher}\n"
                     
-                    # Se a quantidade de horários for menor que o esperado, preenche com "Horário desconhecido"
+                    
                     if len(schedule) < len(time_slots):
                         for j in range(len(schedule), len(time_slots)):
                             grade_content += f"Horário desconhecido: {time_slots[j]}\n"
 
-                    # Caso o formato do slot seja inesperado, é tratado aqui
+                
                     for slot in schedule:
                         if isinstance(slot, list) and len(slot) == 2:
                             discipline, teacher = slot
-                            time_slot = "Horário desconhecido"  # Como não há horário explícito, usamos um marcador
+                            time_slot = "Horário desconhecido"  
                         else:
                             print("🚨 Formato inesperado de slot:", slot)
-                            continue  # Ignora valores inválidos
+                            continue  
 
                         grade_content += f"{time_slot}: {discipline} - {teacher}\n"
 
@@ -420,7 +420,6 @@ class TimetableApp:
             with open(file_path, "w") as f:
                 f.write(grade_content)
 
-            # Atualiza a base de dados com a grade editada
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
             cursor.execute("""
