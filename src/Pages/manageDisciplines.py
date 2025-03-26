@@ -122,7 +122,6 @@ class ManageSubjectsApp:
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
 
-        # Atualiza a disciplina com base na sigla
         cursor.execute("""
             UPDATE disciplines
             SET course = ?, name = ?, sigla = ?
@@ -170,7 +169,7 @@ class ManageSubjectsApp:
     def open_discipline_form(self):
         form = tk.Toplevel(self.root)
         form.title("Adicionar/Editar Disciplina")
-        form.geometry("300x400")  # Ajustado para acomodar todos os campos
+        form.geometry("300x400") 
         
         # Curso
         tk.Label(form, text="Curso:").pack()
@@ -205,17 +204,15 @@ class ManageSubjectsApp:
         def save_discipline():
             course = course_entry.get()
             name = name_entry.get()
-            sigla = code_entry.get()  # Renomeado para 'sigla' (código)
+            sigla = code_entry.get()  
             hours = hours_entry.get()
             type_value = type_entry.get()
             class_number = class_number_entry.get()
 
-            # Verificação de campos vazios
             if not course or not name or not sigla or not hours or not type_value or not class_number:
                 messagebox.showerror("Erro", "Todos os campos são obrigatórios")
                 return
             
-            # Certifique-se de que 'hours' e 'class_number' sejam valores numéricos válidos
             try:
                 hours = float(hours)
                 class_number = int(class_number)
@@ -223,7 +220,6 @@ class ManageSubjectsApp:
                 messagebox.showerror("Erro", "Os campos de horas e número da turma devem ser numéricos válidos.")
                 return
 
-            # Chama a função para adicionar a disciplina
             self.add_discipline(course, name, sigla, hours, type_value, class_number)
             form.destroy()
         
