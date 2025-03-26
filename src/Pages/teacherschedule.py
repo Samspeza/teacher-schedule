@@ -377,7 +377,6 @@ class TimetableApp:
 
             grade_content = f"Grade de {grade_name}\n"
 
-            # Lista fixa de horários
             time_slots = ["19:10 - 20:25", "20:25 - 20:45", "20:45 - 22:00"]
             days_of_week = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
 
@@ -389,19 +388,16 @@ class TimetableApp:
                     for i, entry in enumerate(schedule):
                         if i < len(time_slots): 
                             time_slot = time_slots[i]
-                            discipline, teacher = entry
-                            
+                            discipline, teacher = entry                        
                            
                             if not discipline:
                                 discipline = "-"
                             
-                            grade_content += f"{time_slot}: {discipline} - {teacher}\n"
-                    
+                            grade_content += f"{time_slot}: {discipline} - {teacher}\n"                   
                     
                     if len(schedule) < len(time_slots):
                         for j in range(len(schedule), len(time_slots)):
                             grade_content += f"Horário desconhecido: {time_slots[j]}\n"
-
                 
                     for slot in schedule:
                         if isinstance(slot, list) and len(slot) == 2:
