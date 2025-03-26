@@ -370,23 +370,48 @@ class TimetableApp:
             if not file_path:
                 continue  
 
-            timetable_class = self.timetable.get(grade_name, {})
+            timetable_class = self.timetable.get(grade_name, {})  
 
             print(f"📌 Baixando grade: {grade_name}")
             print(timetable_class)
 
             grade_content = f"Grade de {grade_name}\n"
 
+            # Lista fixa de horários
+            time_slots = ["19:10 - 20:25", "20:25 - 20:45", "20:45 - 22:00"]
+            days_of_week = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
+
             for day in days_of_week:
                 grade_content += f"\n{day}:\n"
-                schedule = timetable_class.get(day, {})
+                schedule = timetable_class.get(day, [])
 
-                if isinstance(schedule, dict):
-                    for time_slot, teacher in schedule.items():
-                        grade_content += f"{time_slot}: {teacher}\n"
-                elif isinstance(schedule, list):
-                    for entry in schedule:
-                        grade_content += f"{entry}\n"
+                if isinstance(schedule, list):
+                    for i, entry in enumerate(schedule):
+                        if i < len(time_slots): 
+                            time_slot = time_slots[i]
+                            discipline, teacher = entry
+                            
+                           
+                            if not discipline:
+                                discipline = "-"
+                            
+                            grade_content += f"{time_slot}: {discipline} - {teacher}\n"
+                    
+                    
+                    if len(schedule) < len(time_slots):
+                        for j in range(len(schedule), len(time_slots)):
+                            grade_content += f"Horário desconhecido: {time_slots[j]}\n"
+
+                
+                    for slot in schedule:
+                        if isinstance(slot, list) and len(slot) == 2:
+                            discipline, teacher = slot
+                            time_slot = "Horário desconhecido"  
+                        else:
+                            print("🚨 Formato inesperado de slot:", slot)
+                            continue  
+
+                        grade_content += f"{time_slot}: {discipline} - {teacher}\n"
 
             grade_content += "\n" + "=" * 30 + "\n"
 
@@ -435,29 +460,33 @@ class TimetableApp:
     def open_edit_modal(self):
         modal_window = tk.Toplevel(self.root)
         modal_window.title("Editar Disciplina e Professor")
-        
+
         label_discipline = tk.Label(modal_window, text="Selecione uma nova disciplina:")
         label_discipline.pack(pady=4)
-        
+
         discipline_select = ttk.Combobox(modal_window, values=[d['name'] for d in get_disciplines(self.coordinator_id)])
         discipline_select.set(self.original_discipline)
         discipline_select.pack(pady=4)
-        
+
         label_teacher = tk.Label(modal_window, text="Selecione um novo professor:")
         label_teacher.pack(pady=4)
-        
+
         teacher_select = ttk.Combobox(modal_window, values=list(teachers.keys()))
         teacher_select.set(self.original_teacher)
         teacher_select.pack(pady=4)
-        
+
         def save_changes():
             new_discipline = discipline_select.get()
             new_teacher = teacher_select.get()
             self.selected_cell.config(text=f"{new_discipline}\n{new_teacher}")
-            
-            self.original_discipline = new_discipline
-            self.original_teacher = new_teacher
-            
+
+            # Atualiza os dados na estrutura timetable
+            for cls, schedule in self.timetable.items():
+                for day, slots in schedule.items():
+                    for i, (discipline, teacher) in enumerate(slots):
+                        if (discipline, teacher) == (self.original_discipline, self.original_teacher):
+                            self.timetable[cls][day][i] = [new_discipline, new_teacher]
+
             modal_window.destroy()
             self.save_button.config(state="disabled")
             self.cancel_button.config(state="disabled")

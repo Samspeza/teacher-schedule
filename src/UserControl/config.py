@@ -190,9 +190,9 @@ def get_coordinator_id_from_db(username, password):
 days_of_week = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
 
 time_slots = [
-    "19:10 - 20:25",  # 1ª aula
-    "20:25 - 20:45",  # Intervalo
-    "20:45 - 22:00"   # 2ª aula
+    "19:10 - 20:25",  
+    "20:25 - 20:45",  
+    "20:45 - 22:00"   
 ]
 
 coordinator_id = None  
