@@ -15,7 +15,6 @@ class UserProfileApp:
         self.root.geometry("400x400")
         self.coordinator_id = coordinator_id
 
-        # Criar os widgets primeiro
         tk.Label(root, text="Nome:").pack(pady=5)
         self.name_entry = tk.Entry(root)
         self.name_entry.pack(pady=5)
@@ -34,8 +33,6 @@ class UserProfileApp:
 
         tk.Button(root, text="Salvar Alterações", command=self.save_changes).pack(pady=20)
         tk.Button(root, text="Fechar", command=self.show_home_screen).pack(pady=5) 
-
-        # Agora carregar os dados do usuário
         self.load_user_data()
 
 

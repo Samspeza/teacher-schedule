@@ -21,7 +21,6 @@ from CSS.style import *
 from UserControl.config import get_class_course, get_disciplines, get_teacher_availability_for_timetable, get_teacher_data, get_teacher_limits,  coordinator_id, teachers, teacher_limits, classes, days_of_week, time_slots
 from ScreenManager import ScreenManager
 from UserControl.sidebar import create_sidebar
-#from UserControl.button_design import create_action_buttons
 
 class TimetableApp:
     def __init__(self, root, coordinator_id):
@@ -50,15 +49,6 @@ class TimetableApp:
         )
         self.action_frame = tk.Frame(self.main_frame, bg=BACKGROUND_COLOR)
         self.action_frame.pack(pady=10, padx=10, fill="x")
-       # create_action_buttons(self.action_frame, {
-       #     "create": self.create_manual_schedule,
-       #     "show_timetable": self.show_timetable,
-       #     "edit_teacher": self.edit_teacher,
-       #     "save_changes": self.save_changes,
-       #     "cancel_edit": self.cancel_edit,
-       #     "confirm_delete_schedule": self.confirm_delete_schedule,
-       #     "download_grade": self.download_grade
-       # })
 
         # Cabeçalho com o título
         self.header_frame = tk.Frame(self.main_frame, bg="#F8F8F8")
@@ -476,7 +466,6 @@ class TimetableApp:
             new_teacher = teacher_select.get()
             self.selected_cell.config(text=f"{new_discipline}\n{new_teacher}")
 
-            # Atualiza os dados na estrutura timetable
             for cls, schedule in self.timetable.items():
                 for day, slots in schedule.items():
                     for i, (discipline, teacher) in enumerate(slots):
