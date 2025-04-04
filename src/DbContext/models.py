@@ -29,6 +29,23 @@ def reset_ids():
     execute_query("DELETE FROM sqlite_sequence WHERE name='time_slots'")
     execute_query("DELETE FROM sqlite_sequence WHERE name='teacher_availability'")
 
+def insert_lab(lab_name, available_days, daily_limit, coordinator_id):
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO laboratories (name, available_days, daily_limit, coordinator_id)
+            VALUES (?, ?, ?, ?)
+        """, (lab_name, available_days, daily_limit, coordinator_id))
+        
+        conn.commit()
+        print(f"Laboratório '{lab_name}' inserido com sucesso!")
+    except sqlite3.Error as e:
+        print(f"Erro ao inserir laboratório: {e}")
+    finally:
+        conn.close()
+
 def get_teachers():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -380,15 +397,15 @@ def insert_teacher(teacher_name, coordinator_id):
     conn.close()
     return teacher_id
 
-def insert_discipline(course, sigla, name, hours, type_, class_number, coordinator_id):
+def insert_discipline(course, sigla, name, hours, type_, class_number, requires_laboratory, laboratory_id, coordinator_id):
     """Insere uma nova disciplina na tabela de disciplinas"""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
     cursor.execute("""
-    INSERT INTO disciplines (course, sigla, name, hours, type, class_number, coordinator_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (course, sigla, name, hours, type_, class_number, coordinator_id))
+    INSERT INTO disciplines (course, sigla, name, hours, type, class_number, requires_laboratory, laboratory_id ,coordinator_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (course, sigla, name, hours, type_, class_number, requires_laboratory ,laboratory_id, coordinator_id))
 
     conn.commit()
     conn.close()

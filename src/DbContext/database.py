@@ -59,7 +59,6 @@ def create_tables():
     );
     """)
 
-
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS classes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -106,6 +105,17 @@ def create_tables():
     """)
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS laboratories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        available_days TEXT NOT NULL,
+        daily_limit INTEGER NOT NULL,
+        coordinator_id INTEGER,
+        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
+    );
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS disciplines (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         course TEXT NOT NULL,
@@ -114,8 +124,11 @@ def create_tables():
         hours REAL NOT NULL,
         type TEXT NOT NULL,
         class_number INTEGER NOT NULL,
+        requires_laboratory BOOLEAN NOT NULL DEFAULT FALSE,
+        laboratory_id INTEGER DEFAULT NULL,
         coordinator_id INTEGER,
-        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
+        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id),
+        FOREIGN KEY (laboratory_id) REFERENCES laboratories(id)
     );
     """)
 
