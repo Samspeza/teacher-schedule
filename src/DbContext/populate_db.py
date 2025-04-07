@@ -1,6 +1,7 @@
+from asyncio.windows_events import NULL
 import sqlite3
 
-from zmq import NULL
+
 from database import DB_NAME, create_tables
 from models import (
     insert_discipline, insert_lab, insert_teacher, insert_availability, insert_class, insert_teacher_limit, insert_time_slot, get_teachers, 
