@@ -49,24 +49,27 @@ teachers = {
 
 disciplines = [
     ("CC4", "AR", "Arquitetura de Redes", 1.5, "T", 5, 0, NULL, 1),
-    ("CC5", "AR", "Arquitetura de Redes", 1.5, "T", 5, 0, NULL, 1),
     ("CC4", "CG", "Comp. Gráfica", 1.5, "T", 5, 0, NULL, 1),
-    ("CC5", "CG", "Comp. Gráfica", 1.5, "T", 5, 0, NULL, 1),
     ("CC4", "AC", "Arquitetura de Computadores", 1.5, "T", 5, 0, NULL, 1),
-    ("CC5", "AC", "Arquitetura de Computadores", 1.5, "T", 5, 0,NULL,  1),
     ("CC4", "LFA", "Ling. Formais e Autom.", 1.5, "T", 5, 0,NULL,  1),
-    ("CC5", "LFA", "Ling. Formais e Autom.", 1.5, "T", 5, 0, NULL, 1),
     ("CC4", "IA", "Inteligência Artificial", 3, "T", 5, 0, NULL, 1),
     ("CC4", "SO", "Sistemas Operacionais", 3, "T/P", 5, 1,NULL,  1),
+
+    ("CC5", "CG", "Comp. Gráfica", 1.5, "T", 5, 0, NULL, 1),
+    ("CC5", "AR", "Arquitetura de Redes", 1.5, "T", 5, 0, NULL, 1),
+    ("CC5", "AC", "Arquitetura de Computadores", 1.5, "T", 5, 0,NULL,  1),
+    ("CC5", "LFA", "Ling. Formais e Autom.", 1.5, "T", 5, 0, NULL, 1),
     ("CC5", "IA", "Inteligência Artificial", 3, "T", 5, 0,NULL,  1),
     ("CC5", "SO", "Sistemas Operacionais", 3, "T/P", 5, 1,NULL,  1),
+    
     ("CC2", "LPOO", "Ling. Programação OO", 4.5, "1T/2P", 3, 1,NULL,  1),
     ("CC2", "BD", "Banco de Dados", 4.5, "2T/1P", 3, 1, NULL, 1),
+    ("CC2", "AG", "Álgebra Linear", 1.5, "1T/2P", 3, 0,NULL,  1),
+    ("CC2", "BD", "Banco de Dados", 4.5, "2T/1P", 3, 0,NULL,  1),
+    
     ("CC3", "LPOO", "Ling. Programação OO", 4.5, "1T/2P", 3, 1,NULL,  1),
     ("CC3", "BD", "Banco de Dados", 4.5, "2T/1P", 3, 1,NULL,  1),
-    ("CC2", "AG", "Álgebra Linear", 1.5, "1T/2P", 3, 0,NULL,  1),
     ("CC3", "AG", "Álgebra Linear", 1.5, "1T/2P", 3, 0,NULL,  1),
-    ("CC2", "BD", "Banco de Dados", 4.5, "2T/1P", 3, 0,NULL,  1),
     
     ("CC6", "AA", "Análise de Algoritmo", 1.5, "1T/2P", 3, 0, NULL, 1),
     ("CC6", "FRV", "Fund. Realidade Virtual / Aum", 3, "1T/2P", 3, 0,NULL,  1),
