@@ -264,7 +264,6 @@ class TimetableApp:
             conn = sqlite3.connect(self.DB_NAME)
             cursor = conn.cursor()
             
-            # Buscar IDs correspondentes
             cursor.execute("SELECT id FROM classes WHERE name = ? AND coordinator_id = ?", (class_name, self.coordinator_id))
             class_id = cursor.fetchone()
 
@@ -350,7 +349,6 @@ class TimetableApp:
             discipline_hours = {d['name']: d['hours'] for d in class_disciplines}  
             assigned_hours = {d['name']: 0 for d in class_disciplines}  
 
-            # Buscar configurações de divisão de laboratório para a turma
             cursor.execute("""
                 SELECT discipline_id, division_count 
                 FROM lab_division_config 
@@ -358,7 +356,6 @@ class TimetableApp:
             """, (get_class_id(cls, self.coordinator_id), self.coordinator_id))
             lab_division_map = {row[0]: row[1] for row in cursor.fetchall()}
 
-            # Organizar disciplinas por ID para buscar nome e requires_laboratory
             discipline_map = {d['id']: d for d in class_disciplines}
 
             for day in days_of_week:
@@ -369,7 +366,6 @@ class TimetableApp:
 
                     available_teachers_for_day = [t for t in teachers if day in availability_per_teacher.get(t, [])]
 
-                    # Obter disciplinas ainda não totalmente alocadas
                     possible_disciplines = [
                         d for d in class_disciplines if assigned_hours[d['name']] < discipline_hours[d['name']]
                     ]
@@ -386,12 +382,11 @@ class TimetableApp:
                         division_count = lab_division_map[discipline_id]
                         horas_por_divisao = int(discipline_hours[discipline_name] / division_count)
                         if assigned_hours[discipline_name] >= horas_por_divisao * division_count:
-                            continue  # já alocado totalmente
+                            continue 
 
                         divisao_atual = int(assigned_hours[discipline_name] / horas_por_divisao) + 1
                         disciplina_label = f"{discipline_name} (Lab {divisao_atual})"
 
-                        # Evitar repetir o mesmo professor no mesmo dia (para simular divisão)
                         possible_teachers = [t for t in available_teachers_for_day if day not in self.teacher_allocations.get(t, set())]
                         teacher = random.choice(possible_teachers) if possible_teachers else ""
                     else:
