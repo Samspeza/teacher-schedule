@@ -19,6 +19,55 @@ def get_coordinator_id_from_db(username, password):
     else:
         return None
 
+def get_class_info_from_db(coordinator_id):
+        """
+        Retorna dicionário com info das turmas: { 'CC101': { 'alunos': 55, 'curso': 'CC' }, ... }
+        """
+        conn = sqlite3.connect("schedule.db")
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT name, course, student_count 
+            FROM classes 
+            WHERE coordinator_id = ?
+        """, (coordinator_id,))
+        results = cursor.fetchall()
+        conn.close()
+        return {row[0]: {'curso': row[1], 'alunos': row[2]} for row in results}
+
+def get_class_divisions(coordinator_id):
+        """
+        Retorna um dicionário com a quantidade de divisões por turma para o coordenador.
+        Exemplo de retorno: { "Turma A": 2, "Turma B": 1 }
+        """
+        
+        conn = sqlite3.connect('schedule.db')  
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT class_name, divisions
+            FROM class_divisions
+            WHERE coordinator_id = ?
+        """, (coordinator_id,))
+
+        rows = cursor.fetchall()
+        conn.close()
+
+        return {row[0]: row[1] for row in rows}
+
+def save_class_division(coordinator_id, class_name, divisions):
+            import sqlite3
+            conn = sqlite3.connect("seu_banco.db")
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                INSERT INTO class_divisions (coordinator_id, class_name, divisions)
+                VALUES (?, ?, ?)
+                ON CONFLICT(coordinator_id, class_name)
+                DO UPDATE SET divisions=excluded.divisions
+            """, (coordinator_id, class_name, divisions))
+
+            conn.commit()
+            conn.close()
 
 def get_classes(coordinator_id):
     """Retorna a lista de classes associadas ao coordenador"""
@@ -186,6 +235,28 @@ def get_coordinator_id_from_db(username, password):
     if coordinator_id:
         return coordinator_id[0] 
     return None
+
+def get_filtered_class(coordinator_id):
+        """Retorna apenas as turmas associadas ao coordenador logado."""
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT name FROM classes WHERE coordinator_id = ?", (coordinator_id,))
+        classes = [row[0] for row in cursor.fetchall()]
+        
+        conn.close()
+        return classes
+
+def get_class_name_by_id(class_id, coordinator_id):
+    """
+    Retorna o nome da turma original dado seu ID.
+    Se a turma estiver dividida (ex: '1A - Lab 1'), retorna apenas o nome base.
+    """
+    all_classes = get_filtered_class(coordinator_id)  
+    for class_name in all_classes:
+        if class_name == class_id or class_name in class_id:
+            return class_name
+    return class_id  # fallback
 
 days_of_week = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
 

@@ -58,15 +58,18 @@ def create_tables():
         time_range TEXT NOT NULL
     );
     """)
-
+    
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS classes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
+        course TEXT NOT NULL,
+        student_count INTEGER NOT NULL,
         coordinator_id INTEGER,
         FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
     """)
+
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS schedule (
@@ -142,8 +145,17 @@ def create_tables():
         FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
     """)
-    
+
+    cursor.execute("""
+    CREATE TABLE class_divisions (
+        id SERIAL PRIMARY KEY,
+        coordinator_id INTEGER NOT NULL,
+        class_name TEXT NOT NULL,
+        divisions INTEGER NOT NULL DEFAULT 1
+    );
+
+    """)
+        
     conn.commit()
     conn.close()
-    
-create_tables()
+

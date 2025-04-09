@@ -108,14 +108,22 @@ def get_teacher_limit(teacher_id, coordinator_id):
     else:
         return float('inf')
 
-def insert_class(class_name, coordinator_id):
+def insert_class(class_name, coordinator_id, student_count):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
+    # Define o curso com base no nome da turma
+    if class_name.startswith("CC"):
+        course = "Ciência da Computação"
+    elif class_name.startswith("ADS"):
+        course = "Análise e Desenvolvimento de Sistemas"
+    else:
+        course = "Curso Desconhecido"  # fallback
+
     cursor.execute("""
-    INSERT INTO classes (name, coordinator_id)
-    VALUES (?, ?)
-    """, (class_name, coordinator_id))
+    INSERT INTO classes (name, course, student_count, coordinator_id)
+    VALUES (?, ?, ?, ?)
+    """, (class_name, course, student_count, coordinator_id))
 
     conn.commit()
     conn.close()
