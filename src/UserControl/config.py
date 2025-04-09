@@ -79,11 +79,11 @@ def get_classes(coordinator_id):
     return [class_[0] for class_ in classes]
 
 def get_disciplines(coordinator_id):
-    """Retorna a lista de disciplinas associadas ao coordenador, com filtro por coordinator_id"""
+    """Retorna a lista de disciplinas associadas ao coordenador, incluindo se exige laboratório"""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, course, sigla, name, hours, type, class_number 
+        SELECT id, course, sigla, name, hours, type, class_number, requires_laboratory 
         FROM disciplines 
         WHERE coordinator_id = ?
     """, (coordinator_id,))
@@ -99,12 +99,12 @@ def get_disciplines(coordinator_id):
             "name": discipline[3],
             "hours": discipline[4],
             "type": discipline[5],
-            "class_number": discipline[6]
+            "class_number": discipline[6],
+            "requires_laboratory": bool(discipline[7])  
         }
         disciplines_data.append(discipline_info)
     
     return disciplines_data
-
 
 def get_class_course(class_name, coordinator_id):
     """Retorna o curso associado a uma classe, filtrado pelo coordenador"""
