@@ -4,7 +4,7 @@ import sqlite3
 
 from database import DB_NAME, create_tables
 from models import (
-    insert_discipline, insert_lab, insert_teacher, insert_availability, insert_class, insert_teacher_limit, insert_time_slot, get_teachers, 
+    clear_class_divisions, insert_discipline, insert_lab, insert_teacher, insert_availability, insert_class, insert_teacher_limit, insert_time_slot, get_teachers, 
     clear_teachers, clear_classes, clear_time_slots, clear_availability, reset_ids
 )
 
@@ -213,6 +213,7 @@ def initialize_db():
     clear_classes()
     clear_time_slots()
     clear_availability()
+    clear_class_divisions()
     reset_ids()
     
     for lab in labs:

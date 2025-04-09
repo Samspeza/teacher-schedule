@@ -22,12 +22,20 @@ def clear_time_slots():
 def clear_availability():
     execute_query("DELETE FROM teacher_availability")
 
+def clear_class_divisions():
+    execute_query("DELETE FROM class_divisions")
+
+def clear_discipline_class():
+    execute_query("DELETE FROM discipline_class")
+
 def reset_ids():
     """Reseta os IDs das tabelas para começar do 1 novamente"""
     execute_query("DELETE FROM sqlite_sequence WHERE name='teachers'")
     execute_query("DELETE FROM sqlite_sequence WHERE name='classes'")
     execute_query("DELETE FROM sqlite_sequence WHERE name='time_slots'")
     execute_query("DELETE FROM sqlite_sequence WHERE name='teacher_availability'")
+    execute_query("DELETE FROM sqlite_sequence WHERE name= 'class_divisions'")
+    execute_query("DELETE FROM sqlite_sequence WHERE name= 'discipline_class'")
 
 def insert_lab(lab_name, available_days, daily_limit, coordinator_id):
     try:

@@ -147,15 +147,38 @@ def create_tables():
     """)
 
     cursor.execute("""
-    CREATE TABLE class_divisions (
-        id SERIAL PRIMARY KEY,
+    CREATE TABLE IF NOT EXISTS class_divisions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         coordinator_id INTEGER NOT NULL,
         class_name TEXT NOT NULL,
         divisions INTEGER NOT NULL DEFAULT 1
     );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS lab_division_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_id INTEGER NOT NULL,
+        discipline_id INTEGER NOT NULL,
+        division_count INTEGER NOT NULL,
+        coordinator_id INTEGER,
+        FOREIGN KEY (class_id) REFERENCES classes(id),
+        FOREIGN KEY (discipline_id) REFERENCES disciplines(id),
+        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
+    );
 
     """)
-        
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS discipline_class (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        discipline_id INTEGER,
+        class_id INTEGER,
+        FOREIGN KEY (discipline_id) REFERENCES disciplines(id),
+        FOREIGN KEY (class_id) REFERENCES classes(id)
+    )
+    """)
+            
     conn.commit()
     conn.close()
 

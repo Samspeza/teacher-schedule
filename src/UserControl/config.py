@@ -83,7 +83,7 @@ def get_disciplines(coordinator_id):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT course, sigla, name, hours, type, class_number 
+        SELECT id, course, sigla, name, hours, type, class_number 
         FROM disciplines 
         WHERE coordinator_id = ?
     """, (coordinator_id,))
@@ -93,12 +93,13 @@ def get_disciplines(coordinator_id):
     disciplines_data = []
     for discipline in disciplines:
         discipline_info = {
-            "course": discipline[0],
-            "sigla": discipline[1],
-            "name": discipline[2],
-            "hours": discipline[3],
-            "type": discipline[4],
-            "class_number": discipline[5]
+            "id": discipline[0],
+            "course": discipline[1],
+            "sigla": discipline[2],
+            "name": discipline[3],
+            "hours": discipline[4],
+            "type": discipline[5],
+            "class_number": discipline[6]
         }
         disciplines_data.append(discipline_info)
     
@@ -258,6 +259,23 @@ def get_class_name_by_id(class_id, coordinator_id):
             return class_name
     return class_id  # fallback
 
+def get_class_id(class_name, coordinator_id):
+        conn = sqlite3.connect("schedule.db")  # Substitua pelo nome correto se for diferente
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id FROM classes
+            WHERE name = ? AND coordinator_id = ?
+        """, (class_name, coordinator_id))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result:
+            return result[0]
+        else:
+            raise ValueError(f"❌ Turma '{class_name}' não encontrada para o coordenador {coordinator_id}.")
+        
 days_of_week = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
 
 time_slots = [
