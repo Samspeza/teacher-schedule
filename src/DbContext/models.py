@@ -22,12 +22,20 @@ def clear_time_slots():
 def clear_availability():
     execute_query("DELETE FROM teacher_availability")
 
+def clear_class_divisions():
+    execute_query("DELETE FROM class_divisions")
+
+def clear_discipline_class():
+    execute_query("DELETE FROM discipline_class")
+
 def reset_ids():
     """Reseta os IDs das tabelas para começar do 1 novamente"""
     execute_query("DELETE FROM sqlite_sequence WHERE name='teachers'")
     execute_query("DELETE FROM sqlite_sequence WHERE name='classes'")
     execute_query("DELETE FROM sqlite_sequence WHERE name='time_slots'")
     execute_query("DELETE FROM sqlite_sequence WHERE name='teacher_availability'")
+    execute_query("DELETE FROM sqlite_sequence WHERE name= 'class_divisions'")
+    execute_query("DELETE FROM sqlite_sequence WHERE name= 'discipline_class'")
 
 def insert_lab(lab_name, available_days, daily_limit, coordinator_id):
     try:
@@ -108,14 +116,22 @@ def get_teacher_limit(teacher_id, coordinator_id):
     else:
         return float('inf')
 
-def insert_class(class_name, coordinator_id):
+def insert_class(class_name, coordinator_id, student_count):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
+    # Define o curso com base no nome da turma
+    if class_name.startswith("CC"):
+        course = "Ciência da Computação"
+    elif class_name.startswith("ADS"):
+        course = "Análise e Desenvolvimento de Sistemas"
+    else:
+        course = "Curso Desconhecido"  # fallback
+
     cursor.execute("""
-    INSERT INTO classes (name, coordinator_id)
-    VALUES (?, ?)
-    """, (class_name, coordinator_id))
+    INSERT INTO classes (name, course, student_count, coordinator_id)
+    VALUES (?, ?, ?, ?)
+    """, (class_name, course, student_count, coordinator_id))
 
     conn.commit()
     conn.close()

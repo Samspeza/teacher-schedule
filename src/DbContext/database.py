@@ -58,15 +58,18 @@ def create_tables():
         time_range TEXT NOT NULL
     );
     """)
-
+    
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS classes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
+        course TEXT NOT NULL,
+        student_count INTEGER NOT NULL,
         coordinator_id INTEGER,
         FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
     """)
+
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS schedule (
@@ -142,8 +145,40 @@ def create_tables():
         FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
     """)
-    
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS class_divisions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        coordinator_id INTEGER NOT NULL,
+        class_name TEXT NOT NULL,
+        divisions INTEGER NOT NULL DEFAULT 1
+    );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS lab_division_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_id INTEGER NOT NULL,
+        discipline_id INTEGER NOT NULL,
+        division_count INTEGER NOT NULL,
+        coordinator_id INTEGER,
+        FOREIGN KEY (class_id) REFERENCES classes(id),
+        FOREIGN KEY (discipline_id) REFERENCES disciplines(id),
+        FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
+    );
+
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS discipline_class (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        discipline_id INTEGER,
+        class_id INTEGER,
+        FOREIGN KEY (discipline_id) REFERENCES disciplines(id),
+        FOREIGN KEY (class_id) REFERENCES classes(id)
+    )
+    """)
+            
     conn.commit()
     conn.close()
-    
-create_tables()
+

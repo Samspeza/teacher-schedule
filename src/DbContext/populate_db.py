@@ -4,7 +4,7 @@ import sqlite3
 
 from database import DB_NAME, create_tables
 from models import (
-    insert_discipline, insert_lab, insert_teacher, insert_availability, insert_class, insert_teacher_limit, insert_time_slot, get_teachers, 
+    clear_class_divisions, insert_discipline, insert_lab, insert_teacher, insert_availability, insert_class, insert_teacher_limit, insert_time_slot, get_teachers, 
     clear_teachers, clear_classes, clear_time_slots, clear_availability, reset_ids
 )
 
@@ -12,6 +12,13 @@ classes = [f"CC{i}" for i in range(1, 9)] + \
           [f"ADS{i}" for i in range(1, 3)] + \
           ["ADS3P", "ADS3R", "ADS4P", "ADS4Q"]
 class_coordinator = {}
+class_course = {}
+
+for turma in classes:
+    if turma.startswith("CC"):
+        class_course[turma] = "Ciência da Computação"
+    elif turma.startswith("ADS"):
+        class_course[turma] = "Análise e Desenvolvimento de Sistemas"
 
 for class_name in classes:
     if class_name.startswith("CC"):
@@ -147,7 +154,6 @@ for teacher_name, data in teachers.items():
 
 def populate_disciplines():
     print("Criando tabelas no banco de dados...")
-    create_tables()
     
     print("Populando banco de dados com disciplinas...")
     
@@ -207,6 +213,7 @@ def initialize_db():
     clear_classes()
     clear_time_slots()
     clear_availability()
+    clear_class_divisions()
     reset_ids()
     
     for lab in labs:
@@ -226,7 +233,15 @@ def initialize_db():
             insert_teacher_limit(teacher_id, limit, coordinator_id)
 
     for class_name, coordinator_id in class_coordinator.items():
-        insert_class(class_name, coordinator_id)
+        # Número de alunos fictício ou baseado em alguma regra
+        if class_name.startswith("CC"):
+            student_count = 100 
+        elif class_name.startswith("ADS"):
+            student_count = 200  
+        else:
+            student_count = 200  
+
+        insert_class(class_name, coordinator_id, student_count)
 
     # Inserir os slots de tempo
     for slot in time_slots:
