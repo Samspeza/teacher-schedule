@@ -331,23 +331,26 @@ class TimetableApp:
         cursor = conn.cursor()
 
         disciplines = get_disciplines(self.coordinator_id)
-        teachers = get_teacher_data(self.coordinator_id)  
+        teachers = get_teacher_data(self.coordinator_id)
         teacher_limits = get_teacher_limits(self.coordinator_id)
-        
+
         classes = self.get_filtered_classes()
         if not classes:
             print("⚠️ Nenhuma turma encontrada para este coordenador.")
             return {}
 
-        timetable = {cls: {day: [['', ''] for _ in time_slots] for day in days_of_week} for cls in classes}
+        timetable = {
+            cls: {day: [['', ''] for _ in time_slots] for day in days_of_week}
+            for cls in classes
+        }
         availability_per_teacher = get_teacher_availability_for_timetable(teacher_limits, teachers)
 
         for cls in classes:
-            class_course = get_class_course(cls, self.coordinator_id)  
-            class_disciplines = [d for d in disciplines if d['course'] == class_course]  
+            class_course = get_class_course(cls, self.coordinator_id)
+            class_disciplines = [d for d in disciplines if d['course'] == class_course]
 
-            discipline_hours = {d['name']: d['hours'] for d in class_disciplines}  
-            assigned_hours = {d['name']: 0 for d in class_disciplines}  
+            discipline_hours = {d['name']: d['hours'] for d in class_disciplines}
+            assigned_hours = {d['name']: 0 for d in class_disciplines}
 
             cursor.execute("""
                 SELECT discipline_id, division_count 
@@ -364,7 +367,9 @@ class TimetableApp:
                         timetable[cls][day][i] = ["", "INTERVALO"]
                         continue
 
-                    available_teachers_for_day = [t for t in teachers if day in availability_per_teacher.get(t, [])]
+                    available_teachers_for_day = [
+                        t for t in teachers if day in availability_per_teacher.get(t, [])
+                    ]
 
                     possible_disciplines = [
                         d for d in class_disciplines if assigned_hours[d['name']] < discipline_hours[d['name']]
@@ -382,7 +387,7 @@ class TimetableApp:
                         division_count = lab_division_map[discipline_id]
                         horas_por_divisao = int(discipline_hours[discipline_name] / division_count)
                         if assigned_hours[discipline_name] >= horas_por_divisao * division_count:
-                            continue 
+                            continue
 
                         divisao_atual = int(assigned_hours[discipline_name] / horas_por_divisao) + 1
                         disciplina_label = f"{discipline_name} (Lab {divisao_atual})"
@@ -397,8 +402,34 @@ class TimetableApp:
                     self.teacher_allocations.setdefault(teacher, set()).add(day)
                     timetable[cls][day][i] = [disciplina_label, teacher]
 
+            # ✅ Adiciona colunas fixas
+            timetable[cls]["Código"] = {}
+            timetable[cls]["Disciplina"] = {}
+            timetable[cls]["Turma"] = {}
+            timetable[cls]["Encontro"] = {}
+
+            for i, time_slot in enumerate(time_slots):
+                if time_slot == "20:25 - 20:45":
+                    timetable[cls]["Código"][i] = ""
+                    timetable[cls]["Disciplina"][i] = ""
+                    timetable[cls]["Turma"][i] = ""
+                    timetable[cls]["Encontro"][i] = ""
+                    continue
+
+                disciplina = ""
+                for day in days_of_week:
+                    if timetable[cls][day][i][0]:
+                        disciplina = timetable[cls][day][i][0]
+                        break
+
+                timetable[cls]["Código"][i] = f"CMP{i+1:03}" if disciplina else ""
+                timetable[cls]["Disciplina"][i] = disciplina
+                timetable[cls]["Turma"][i] = cls if disciplina else ""
+                timetable[cls]["Encontro"][i] = f"{i+1}/15" if disciplina else ""
+
         conn.close()
         return timetable
+
 
 
     def show_timetable(self):
@@ -412,55 +443,142 @@ class TimetableApp:
 
 
     def create_class_table(self, parent, name, timetable_class):
+        if not isinstance(timetable_class, dict):
+            print("ERRO: 'timetable_class' deve ser um dicionário.")
+            return
+
         frame = tk.Frame(parent, bg=WHITE_COLOR, relief="solid", borderwidth=1)
         frame.pack(padx=20, pady=10, fill="x", expand=True)
 
-        header = tk.Frame(frame)
-        header.grid(row=0, column=0, columnspan=len(days_of_week) + 2, sticky="ew")
-        
-        header_label = tk.Label(header, text=f"Grade para {name}", font=HEADER_FONT, fg=TEXT_COLOR)
-        header_label.pack(side="left", padx=10, pady=5)
-        
-        var = tk.BooleanVar()
-        checkbox = tk.Checkbutton(header, variable=var, command=lambda: self.select_grade(name, var))
-        checkbox.pack(side="right", padx=10, pady=5)
-        
-        # Primeira linha de cabeçalhos para os dias da semana
-        tk.Label(frame, text="", font=LABEL_FONT, fg=TEXT_COLOR, relief="ridge", borderwidth=1).grid(row=1, column=0, padx=6, pady=6, sticky="nsew")
+        # Título da tabela
+        header_label = tk.Label(
+            frame,
+            text=f"TURMA: {name}",
+            font=("Helvetica", 14, "bold"),
+            fg="black",
+            bg=WHITE_COLOR
+        )
+        header_label.grid(row=0, column=0, columnspan=11, pady=10)
+
+        # Cabeçalhos fixos
+        static_headers = ["Horário", "Código", "Disciplina", "Turma", "Encontro"]
+        for i, header in enumerate(static_headers):
+            label = tk.Label(
+                frame,
+                text=header,
+                font=("Helvetica", 10, "bold"),
+                relief="ridge",
+                borderwidth=1,
+                width=12,
+                bg="#F5F5F5"
+            )
+            label.grid(row=1, column=i, sticky="nsew")
+
+        # Dias da semana
         for i, day in enumerate(days_of_week):
-            day_label = tk.Label(frame, text=day, font=LABEL_FONT, fg=TEXT_COLOR, relief="ridge", borderwidth=1)
-            day_label.grid(row=1, column=i+1, padx=6, pady=6, sticky="nsew")
-        
-        # Adicionando os horários
-        for row, time_slot in enumerate(time_slots, start=2):
-            time_label = tk.Label(frame, text=time_slot, font=TIME_SLOT_FONT, bg=LABEL_COLOR, fg=TEXT_COLOR, relief="ridge", borderwidth=1)
-            time_label.grid(row=row, column=0, padx=10, pady=3, sticky="nsew")
-            
-            # Acessando as disciplinas e professores para cada horário
-            for col, day in enumerate(days_of_week, start=1):
-                cell_data = timetable_class[day][row - 2]
+            day_label = tk.Label(
+                frame,
+                text=day.upper(),
+                font=("Helvetica", 10, "bold"),
+                relief="ridge",
+                borderwidth=1,
+                width=15,
+                bg="#DCE6F1"
+            )
+            day_label.grid(row=1, column=i + len(static_headers), sticky="nsew")
+
+        # Preenchimento das linhas (uma por horário)
+        for row_index, time_slot in enumerate(time_slots, start=2):
+            # Coluna Horário
+            time_label = tk.Label(
+                frame,
+                text=time_slot,
+                font=("Helvetica", 9),
+                relief="ridge",
+                borderwidth=1,
+                bg="#EFEFEF"
+            )
+            time_label.grid(row=row_index, column=0, sticky="nsew")
+
+            # Coluna Código
+            code_label = tk.Label(
+                frame,
+                text=timetable_class.get("Código", {}).get(row_index - 2, ""),
+                font=("Helvetica", 9),
+                relief="ridge",
+                borderwidth=1
+            )
+            code_label.grid(row=row_index, column=1, sticky="nsew")
+
+            # Coluna Disciplina
+            discipline_label = tk.Label(
+                frame,
+                text=timetable_class.get("Disciplina", {}).get(row_index - 2, ""),
+                font=("Helvetica", 9),
+                relief="ridge",
+                borderwidth=1
+            )
+            discipline_label.grid(row=row_index, column=2, sticky="nsew")
+
+            # Coluna Turma
+            turma_label = tk.Label(
+                frame,
+                text=timetable_class.get("Turma", {}).get(row_index - 2, ""),
+                font=("Helvetica", 9),
+                relief="ridge",
+                borderwidth=1
+            )
+            turma_label.grid(row=row_index, column=3, sticky="nsew")
+
+            # Coluna Encontro
+            encontro_label = tk.Label(
+                frame,
+                text=timetable_class.get("Encontro", {}).get(row_index - 2, ""),
+                font=("Helvetica", 9),
+                relief="ridge",
+                borderwidth=1
+            )
+            encontro_label.grid(row=row_index, column=4, sticky="nsew")
+
+            # Colunas de Segunda a Sexta
+            for col_index, day in enumerate(days_of_week):
+                day_data = timetable_class.get(day, [])
+                if row_index - 2 < len(day_data):
+                    cell_data = day_data[row_index - 2]
+                else:
+                    cell_data = ["", ""]
+
                 discipline = cell_data[0]
                 teacher = cell_data[1] if cell_data[1] else "[SEM PROFESSOR]"
 
-                # Destacar visualmente laboratórios
-                if "(Lab" in discipline:
-                    cell_bg = "#E6F7FF"  # azul claro para laboratório
-                elif "INTERVALO" in teacher:
-                    cell_bg = "#F0F0F0"  # cinza claro para intervalo
+                # Cor de fundo
+                if "INTERVALO" in teacher.upper():
+                    bg_color = "#F2F2F2"
+                    display_text = "INTERVALO"
+                elif "LAB" in discipline.upper():
+                    bg_color = "#D9F0FF"
+                    display_text = f"{discipline}\n{teacher}"
                 else:
-                    cell_bg = WHITE_COLOR
+                    bg_color = "white"
+                    display_text = f"{discipline}\n{teacher}"
 
-                # Exibindo o nome do professor e a disciplina na célula
-                cell_label = tk.Label(
-                    frame, 
-                    text=f"{discipline}\n{teacher}", 
-                    font=TEACHER_FONT, 
-                    bg=cell_bg, 
-                    fg=TEXT_COLOR,
-                    padx=8, pady=4, relief="groove", borderwidth=1
+                cell = tk.Label(
+                    frame,
+                    text=display_text,
+                    font=("Helvetica", 9),
+                    relief="groove",
+                    borderwidth=1,
+                    bg=bg_color,
+                    justify="center",
+                    wraplength=100,
+                    padx=4, pady=4
                 )
-                cell_label.grid(row=row, column=col, padx=6, pady=3, sticky="nsew")
-                cell_label.bind("<Button-1>", lambda e, d=day, t=time_slot, l=cell_label: self.select_cell(d, t, l))
+                cell.grid(row=row_index, column=col_index + len(static_headers), sticky="nsew")
+                cell.bind("<Button-1>", lambda e, d=day, t=time_slot, l=cell: self.select_cell(d, t, l))
+
+        # Tornar colunas expansíveis
+        for col in range(11):
+            frame.grid_columnconfigure(col, weight=1)
 
 
     def select_grade(self, grade_name, var):
