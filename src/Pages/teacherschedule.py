@@ -347,10 +347,9 @@ class TimetableApp:
 
             availability_per_teacher = get_teacher_availability_for_timetable(teacher_limits, teachers)
 
-            for cls in classes:
-                divisao_lab = {}
-                class_course = get_class_course(cls, self.coordinator_id)
-                class_disciplines = [d for d in disciplines if d['course'] == class_course]
+        for cls in classes:
+            class_course = get_class_course(cls, self.coordinator_id)  
+            class_disciplines = [d for d in disciplines if d['course'] == class_course]  
 
                 discipline_hours = {d['name']: d['hours'] for d in class_disciplines}
                 assigned_hours = {d['name']: 0 for d in class_disciplines}
@@ -423,8 +422,34 @@ class TimetableApp:
                         # Armazena o registro formatado para exibição
                         timetable_entries[cls].append(entry)
 
-            conn.close()
+                # ✅ Adiciona colunas fixas
+            timetable[cls]["Código"] = {}
+            timetable[cls]["Disciplina"] = {}
+            timetable[cls]["Turma"] = {}
+            timetable[cls]["Encontro"] = {}
+
+            for i, time_slot in enumerate(time_slots):
+                if time_slot == "20:25 - 20:45":
+                    timetable[cls]["Código"][i] = ""
+                    timetable[cls]["Disciplina"][i] = ""
+                    timetable[cls]["Turma"][i] = ""
+                    timetable[cls]["Encontro"][i] = ""
+                    continue
+
+                disciplina = ""
+                for day in days_of_week:
+                    if timetable[cls][day][i][0]:
+                        disciplina = timetable[cls][day][i][0]
+                        break
+
+                timetable[cls]["Código"][i] = f"CMP{i+1:03}" if disciplina else ""
+                timetable[cls]["Disciplina"][i] = disciplina
+                timetable[cls]["Turma"][i] = cls if disciplina else ""
+                timetable[cls]["Encontro"][i] = f"{i+1}/15" if disciplina else ""
+
+        conn.close()
             return timetable_entries
+
 
 
     def show_timetable(self):
