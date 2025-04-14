@@ -440,13 +440,21 @@ class TimetableApp:
             self.create_class_table(self.scroll_frame, name, timetable_class)
 
     def create_class_table(self, frame, class_name, timetable_class):
-        # Remover a limpeza do frame AQUI
+        # Ordem correta dos dias úteis
+        week_order = {
+            "Segunda": 0,
+            "Terça": 1,
+            "Quarta": 2,
+            "Quinta": 3,
+            "Sexta": 4,
+        }
 
-        # Cria um sub-frame por turma
+        # Ordena os registros por dia e horário de início
+        timetable_class.sort(key=lambda x: (week_order.get(x["DIA"], 99), x["INÍCIO"]))
+
         class_frame = tk.Frame(frame)
         class_frame.pack(pady=10, fill="x", expand=True)
 
-        # Título da turma
         title = tk.Label(
             class_frame,
             text=f"TURMA {class_name}",
@@ -470,18 +478,48 @@ class TimetableApp:
             )
             label.grid(row=1, column=col, sticky="nsew")
 
-        # Conteúdo da grade
-        for row_idx, entry in enumerate(timetable_class, start=2):
-            for col_idx, header in enumerate(headers):
-                value = entry.get(header, "")
-                label = tk.Label(
-                    class_frame,
-                    text=value,
-                    font=("Helvetica", 9),
-                    relief="ridge",
-                    borderwidth=1
-                )
-                label.grid(row=row_idx, column=col_idx, sticky="nsew")
+        # Linhas com agrupamento por dia
+        row = 2
+        i = 0
+        while i < len(timetable_class):
+            current = timetable_class[i]
+            day = current["DIA"]
+
+            # Conta quantas vezes o dia se repete consecutivamente
+            rowspan = 1
+            for j in range(i + 1, len(timetable_class)):
+                if timetable_class[j]["DIA"] == day:
+                    rowspan += 1
+                else:
+                    break
+
+            # Dia com rowspan
+            day_label = tk.Label(
+                class_frame,
+                text=day,
+                font=("Helvetica", 9),
+                relief="ridge",
+                borderwidth=1
+            )
+            day_label.grid(row=row, column=0, rowspan=rowspan, sticky="nsew")
+
+            # Restante das colunas
+            for k in range(rowspan):
+                entry = timetable_class[i + k]
+                for col_idx, header in enumerate(headers[1:], start=1):
+                    value = entry.get(header, "")
+                    label = tk.Label(
+                        class_frame,
+                        text=value,
+                        font=("Helvetica", 9),
+                        relief="ridge",
+                        borderwidth=1
+                    )
+                    label.grid(row=row + k, column=col_idx, sticky="nsew")
+
+            i += rowspan
+            row += rowspan
+
 
     def select_grade(self, grade_name, var):
         if var.get():
