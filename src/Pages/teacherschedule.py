@@ -6,6 +6,8 @@ import random
 import openpyxl
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, Alignment
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 from tkinter import PhotoImage
 from tkinter import filedialog
 from tkinter import messagebox
@@ -166,7 +168,7 @@ class TimetableApp:
         self.download_button = tk.Button(
             self.action_frame,
             image=self.download_icon,
-            command=self.download_grade,
+            command=self.show_export_options, 
             state="disabled",
             padx=8,
             pady=4,
@@ -345,7 +347,6 @@ class TimetableApp:
             for cls in classes
         }
 
-        # Novo dicionário para armazenar os registros exibíveis
         timetable_entries = {cls: [] for cls in classes}
 
         availability_per_teacher = get_teacher_availability_for_timetable(teacher_limits, teachers)
@@ -440,13 +441,10 @@ class TimetableApp:
             self.create_class_table(self.scroll_frame, name, timetable_class)
 
     def create_class_table(self, frame, class_name, timetable_class):
-        # Remover a limpeza do frame AQUI
 
-        # Cria um sub-frame por turma
         class_frame = tk.Frame(frame)
         class_frame.pack(pady=10, fill="x", expand=True)
 
-        # Título da turma
         title = tk.Label(
             class_frame,
             text=f"TURMA {class_name}",
@@ -454,6 +452,15 @@ class TimetableApp:
             pady=10
         )
         title.grid(row=0, column=0, columnspan=10)
+
+        var = tk.BooleanVar()
+        checkbox = tk.Checkbutton(
+            class_frame,
+            text="",
+            variable=var,
+            command=lambda: self.select_grade(class_name, var)
+        )
+        checkbox.grid(row=0, column=10, padx=10)
 
         headers = ["DIA", "INÍCIO", "TÉRMINO", "CÓDIGO", "NOME", "TURMA LAB", "PROFESSOR", "TEÓRICA", "PRÁTICA", "ENCONTRO"]
 
@@ -496,120 +503,143 @@ class TimetableApp:
         else:
             self.download_button.config(state="disabled")
             
+
+    def show_export_options(self):
+        if not self.selected_grades:
+            messagebox.showwarning("Aviso", "Nenhuma grade selecionada para download.")
+            return
+
+        # Janela de opções
+        option_window = tk.Toplevel(self.root)
+        option_window.title("Escolher formato de exportação")
+        option_window.geometry("300x150")
+        option_window.grab_set()  # Torna modal
+
+        excel_var = tk.BooleanVar(value=True)
+        pdf_var = tk.BooleanVar(value=False)
+
+        tk.Checkbutton(option_window, text="Exportar para Excel (.xlsx)", variable=excel_var).pack(pady=5)
+        tk.Checkbutton(option_window, text="Exportar para PDF (.pdf)", variable=pdf_var).pack(pady=5)
+
+        def start_export():
+            export_excel = excel_var.get()
+            export_pdf = pdf_var.get()
+            option_window.destroy()
+            self.download_grade(export_excel, export_pdf)
+
+        tk.Button(option_window, text="Exportar", command=start_export).pack(pady=10)
+
     DB_NAME = "schedule.db"
 
-    def download_grade(self):
+    def download_grade(self, export_excel=True, export_pdf=False):
         if not self.selected_grades:
             messagebox.showwarning("Aviso", "Nenhuma grade selecionada para download.")
             return
 
         for grade_name in self.selected_grades:
-            file_path = filedialog.asksaveasfilename(
-                defaultextension=".txt", 
-                filetypes=[("Text files", "*.txt")],
-                initialfile=f"{grade_name}.txt"
-            )
+            # Seleciona pasta
+            dir_path = filedialog.askdirectory(title="Escolha uma pasta para salvar os arquivos")
 
-            if not file_path:
-                continue  
+            if not dir_path:
+                continue
 
-            timetable_class = self.timetable.get(grade_name, {})  
+            entries = self.timetable.get(grade_name, [])
+            headers = ["DIA", "INÍCIO", "TÉRMINO", "CÓDIGO", "NOME", "TURMA LAB", "PROFESSOR", "TEÓRICA", "PRÁTICA", "ENCONTRO"]
 
-            print(f"📌 Baixando grade: {grade_name}")
-            print(timetable_class)
-
+            # Conteúdo para salvar no banco
             grade_content = f"Grade de {grade_name}\n"
-
-            time_slots = ["19:10 - 20:25", "20:25 - 20:45", "20:45 - 22:00"]
-            days_of_week = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
-
-            for day in days_of_week:
-                grade_content += f"\n{day}:\n"
-                schedule = timetable_class.get(day, [])
-
-                if isinstance(schedule, list):
-                    for i, entry in enumerate(schedule):
-                        if i < len(time_slots): 
-                            time_slot = time_slots[i]
-                            discipline, teacher = entry                        
-                           
-                            if not discipline:
-                                discipline = "-"
-                            
-                            grade_content += f"{time_slot}: {discipline} - {teacher}\n"                   
-                    
-                    if len(schedule) < len(time_slots):
-                        for j in range(len(schedule), len(time_slots)):
-                            grade_content += f"Horário desconhecido: {time_slots[j]}\n"
-                
-                    for slot in schedule:
-                        if isinstance(slot, list) and len(slot) == 2:
-                            discipline, teacher = slot
-                            time_slot = "Horário desconhecido"  
-                        else:
-                            print("🚨 Formato inesperado de slot:", slot)
-                            continue  
-
-                        grade_content += f"{time_slot}: {discipline} - {teacher}\n"
-
+            grade_content += "\t".join(headers) + "\n"
+            for entry in entries:
+                row = "\t".join([str(entry.get(h, "")) for h in headers])
+                grade_content += row + "\n"
             grade_content += "\n" + "=" * 30 + "\n"
 
-            print("📌 Dados salvos no arquivo:\n", grade_content)  
+            # Exporta para Excel
+            if export_excel:
+                excel_path = os.path.join(dir_path, f"{grade_name}.xlsx")
+                wb = openpyxl.Workbook()
+                ws = wb.active
+                ws.title = grade_name[:31]
+                ws.append(headers)
+                for entry in entries:
+                    ws.append([entry.get(h, "") for h in headers])
+                for col in range(1, len(headers) + 1):
+                    cell = ws.cell(row=1, column=col)
+                    cell.font = Font(bold=True)
+                    cell.alignment = Alignment(horizontal="center")
+                    max_length = max(len(str(cell.value)) for cell in ws[get_column_letter(col)])
+                    ws.column_dimensions[get_column_letter(col)].width = max_length + 2
+                wb.save(excel_path)
+                print(f"✅ Excel salvo: {excel_path}")
 
-            with open(file_path, "w") as f:
-                f.write(grade_content)
+            # Exporta para PDF
+            if export_pdf:
+                pdf_path = os.path.join(dir_path, f"{grade_name}.pdf")
+                c = canvas.Canvas(pdf_path, pagesize=A4)
+                width, height = A4
+                y = height - 50
+                c.setFont("Helvetica-Bold", 14)
+                c.drawString(50, y, f"Grade de {grade_name}")
+                y -= 30
+                c.setFont("Helvetica", 10)
+                for entry in entries:
+                    line = " | ".join([f"{h}: {entry.get(h, '')}" for h in headers])
+                    c.drawString(50, y, line[:180])  # limita largura
+                    y -= 15
+                    if y < 50:
+                        c.showPage()
+                        y = height - 50
+                c.save()
+                print(f"📄 PDF salvo: {pdf_path}")
 
+            # Salva no banco
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
             cursor.execute("""
             INSERT INTO saved_grades (name, content, file_path, coordinator_id)
             VALUES (?, ?, ?, ?)
-            """, (grade_name, grade_content, file_path, self.coordinator_id))
-
+            """, (grade_name, grade_content, dir_path, self.coordinator_id))
             conn.commit()
             conn.close()
 
-        messagebox.showinfo("Sucesso", "Grade(s) baixada(s) com sucesso e salvas no banco!")
+        messagebox.showinfo("Sucesso", "Exportação concluída e grades salvas no banco!")
 
-    def export_timetable_to_excel(timetable, filename="horario_gerado.xlsx"):
-        wb = openpyxl.Workbook()
-        wb.remove(wb.active)  # remove a aba padrão
+        def export_timetable_to_excel(self, timetable, filename="horario_gerado.xlsx"):
+            wb = openpyxl.Workbook()
+            wb.remove(wb.active)
 
-        for cls, entries in timetable.items():
-            ws = wb.create_sheet(title=cls[:31])  # Excel limita o nome da aba a 31 caracteres
+            for cls, entries in timetable.items():
+                ws = wb.create_sheet(title=cls[:31])
 
-            # Cabeçalhos
-            headers = ["DIA", "INÍCIO", "TÉRMINO", "CÓDIGO", "NOME", "TURMA LAB", "PROFESSOR", "TEÓRICA", "PRÁTICA", "ENCONTRO"]
-            ws.append(headers)
+                headers = ["DIA", "INÍCIO", "TÉRMINO", "CÓDIGO", "NOME", "TURMA LAB", "PROFESSOR", "TEÓRICA", "PRÁTICA", "ENCONTRO"]
+                ws.append(headers)
 
-            for entry in entries:
-                ws.append([
-                    entry["DIA"],
-                    entry["INÍCIO"],
-                    entry["TÉRMINO"],
-                    entry["CÓDIGO"],
-                    entry["NOME"],
-                    entry["TURMA LAB"],
-                    entry["PROFESSOR"],
-                    entry["TEÓRICA"],
-                    entry["PRÁTICA"],
-                    entry["ENCONTRO"]
-                ])
+                for entry in entries:
+                    ws.append([
+                        entry.get("DIA", ""),
+                        entry.get("INÍCIO", ""),
+                        entry.get("TÉRMINO", ""),
+                        entry.get("CÓDIGO", ""),
+                        entry.get("NOME", ""),
+                        entry.get("TURMA LAB", ""),
+                        entry.get("PROFESSOR", ""),
+                        entry.get("TEÓRICA", ""),
+                        entry.get("PRÁTICA", ""),
+                        entry.get("ENCONTRO", "")
+                    ])
 
-            # Estilização: cabeçalho em negrito e centralizado
-            for col in range(1, len(headers) + 1):
-                cell = ws.cell(row=1, column=col)
-                cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal="center")
+                for col in range(1, len(headers) + 1):
+                    cell = ws.cell(row=1, column=col)
+                    cell.font = Font(bold=True)
+                    cell.alignment = Alignment(horizontal="center")
+                    max_length = max(len(str(c.value)) if c.value else 0 for c in ws[get_column_letter(col)])
+                    ws.column_dimensions[get_column_letter(col)].width = max_length + 2
 
-                # Autoajuste de largura
-                max_length = max(len(str(cell.value)) for cell in ws[get_column_letter(col)])
-                ws.column_dimensions[get_column_letter(col)].width = max_length + 2
+            wb.save(filename)
+            print(f"✅ Arquivo exportado: {filename}")
 
-        wb.save(filename)
-        print(f"✅ Arquivo exportado: {filename}")
 
-        def select_cell(self, day, time_slot, label):
+    def select_cell(self, day, time_slot, label):
             if self.selected_cell:
                 self.selected_cell.config(bg=WHITE_COLOR)
             
