@@ -645,7 +645,7 @@ class TimetableApp:
 
         messagebox.showinfo("Sucesso", "Exportação concluída e grades salvas no banco!")
 
-        def export_timetable_to_excel(self, timetable, filename="horario_gerado.xlsx"):
+    def export_timetable_to_excel(self, timetable, filename="horario_gerado.xlsx"):
             wb = openpyxl.Workbook()
             wb.remove(wb.active)
 
