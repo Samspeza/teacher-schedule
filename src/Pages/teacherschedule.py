@@ -345,7 +345,6 @@ class TimetableApp:
             for cls in classes
         }
 
-        # Novo dicionário para armazenar os registros exibíveis
         timetable_entries = {cls: [] for cls in classes}
 
         availability_per_teacher = get_teacher_availability_for_timetable(teacher_limits, teachers)
@@ -440,13 +439,10 @@ class TimetableApp:
             self.create_class_table(self.scroll_frame, name, timetable_class)
 
     def create_class_table(self, frame, class_name, timetable_class):
-        # Remover a limpeza do frame AQUI
 
-        # Cria um sub-frame por turma
         class_frame = tk.Frame(frame)
         class_frame.pack(pady=10, fill="x", expand=True)
 
-        # Título da turma
         title = tk.Label(
             class_frame,
             text=f"TURMA {class_name}",
