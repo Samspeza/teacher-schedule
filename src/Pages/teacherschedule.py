@@ -356,7 +356,7 @@ class TimetableApp:
             class_disciplines = [d for d in disciplines if d['course'] == class_course]
 
             discipline_hours = {d['name']: d['hours'] for d in class_disciplines}
-            assigned_hours = {d['name']: 0 for d in class_disciplines}
+            assigned_hours = {d['id']: 0 for d in class_disciplines}
             discipline_map = {d['id']: d for d in class_disciplines}
             cursor.execute("""
                 SELECT discipline_id, division_count 
@@ -376,7 +376,7 @@ class TimetableApp:
                         ]
 
                     possible_disciplines = [
-                        d for d in class_disciplines if assigned_hours[d['name']] < discipline_hours[d['name']]
+                        d for d in class_disciplines if assigned_hours[d['id']] < discipline_hours[d['name']]
                     ]
                     if not possible_disciplines:
                         timetable[cls][day][i] = ["", ""]
@@ -393,7 +393,7 @@ class TimetableApp:
                         current_division = int(assigned_hours[discipline_id] / horas_por_divisao) + 1
                         if current_division > division_count:
                             continue  
-                        if assigned_hours[discipline_name] >= horas_por_divisao * division_count:
+                        if assigned_hours[discipline_id] >= horas_por_divisao * division_count:
                             continue
 
                         disciplina_label = f"{discipline_name}"
@@ -421,7 +421,7 @@ class TimetableApp:
                         turma_lab = cls
                         teacher = random.choice(available_teachers_for_day) if available_teachers_for_day else ""
 
-                    assigned_hours[discipline_name] += 1
+                    assigned_hours[discipline_id] += 1
                     self.teacher_allocations.setdefault(teacher, set()).add(day)
                     timetable[cls][day][i] = [disciplina_label, teacher]
                     turma_lab = "" if not requires_lab else cls
