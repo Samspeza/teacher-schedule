@@ -25,8 +25,8 @@ def get_available_lab(cursor, day, used_labs, coordinator_id):
 
     return None
 
-def get_laboratories(coordinator_id, db_name="schedule.db"):
-    conn = sqlite3.connect(db_name)
+def get_laboratories(coordinator_id):
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
     cursor.execute("""
