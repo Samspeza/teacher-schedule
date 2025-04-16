@@ -1,8 +1,59 @@
+import ast
 import sqlite3
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'DbContext')))
 from database import DB_NAME
+
+def get_available_lab(cursor, day, used_labs, coordinator_id):
+    cursor.execute("""
+        SELECT id, name, available_days, daily_limit 
+        FROM laboratories 
+        WHERE coordinator_id = ?
+    """, (coordinator_id,))
+    labs = cursor.fetchall()
+
+    for lab_id, name, available_days, daily_limit in labs:
+        days = available_days.split(",")
+        if day not in days:
+            continue
+
+        used_labs.setdefault((name, day), 0)
+        if used_labs[(name, day)] < daily_limit:
+            used_labs[(name, day)] += 1
+            return name
+
+    return None
+
+def get_laboratories(coordinator_id, db_name="schedule.db"):
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, name, available_days, daily_limit
+        FROM laboratories
+        WHERE coordinator_id = ?
+    """, (coordinator_id,))
+
+    labs = []
+    for row in cursor.fetchall():
+        lab_id, name, available_days, daily_limit = row
+
+        if isinstance(available_days, str):
+            try:
+                available_days = ast.literal_eval(available_days)
+            except Exception:
+                available_days = []
+
+        labs.append({
+            "id": lab_id,
+            "name": name,
+            "available_days": available_days,
+            "daily_limit": daily_limit
+        })
+
+    conn.close()
+    return labs
 
 def get_coordinator_id_from_db(username, password):
     """Consulta o banco de dados e retorna o ID do coordenador baseado no login"""
