@@ -391,26 +391,29 @@ class TimetableApp:
                         if current_division > division_count:
                             continue  
 
-                        # Aqui, ao invés de usar o nome da turma, você deve usar o nome do laboratório.
                         lab_name = get_available_lab(cursor, day, used_labs, self.coordinator_id)
-                        if not lab_name:
-                            continue  
+                        turma_lab = lab_name if lab_name else ""
 
-                        teacher = random.choice([
+                        teachers_free_today = [
                             t for t in available_teachers_for_day if day not in self.teacher_allocations.get(t, set())
-                        ]) if available_teachers_for_day else ""
+                        ]
+
+                        if not teachers_free_today and available_teachers_for_day:
+                            teachers_free_today = available_teachers_for_day
+
+                        teacher = random.choice(teachers_free_today) if teachers_free_today else ""
+
 
                         self.teacher_allocations.setdefault(teacher, set()).add(day)
                         assigned_hours[discipline_id] += 1
 
-                        turma_lab = lab_name  # Aqui usamos o nome do laboratório em vez do nome da turma.
                         entry = {
                             "DIA": day,
                             "INÍCIO": inicio,
                             "TÉRMINO": termino,
                             "CÓDIGO": f"CMP{i+1:03}-L{current_division}",
                             "NOME": discipline_name,
-                            "TURMA LAB": turma_lab,  # Agora "TURMA LAB" vai receber o nome do laboratório
+                            "TURMA LAB": turma_lab,
                             "PROFESSOR": teacher,
                             "TEÓRICA": "",
                             "PRÁTICA": "X",
@@ -418,19 +421,24 @@ class TimetableApp:
                         }
 
                     else:
-                        # Disciplinas teóricas ou práticas sem divisão configurada
-                        teacher = random.choice(available_teachers_for_day) if available_teachers_for_day else ""
+                        teachers_free_today = [
+                            t for t in available_teachers_for_day if day not in self.teacher_allocations.get(t, set())
+                        ]
+                        teacher = random.choice(teachers_free_today) if teachers_free_today else ""
+
                         self.teacher_allocations.setdefault(teacher, set()).add(day)
                         assigned_hours[discipline_id] += 1
 
-                        turma_lab = cls  # Para disciplinas sem laboratório, continua como a turma.
+                        # ✅ Ajuste aqui: deixar TURMA LAB vazio em aulas teóricas
+                        turma_lab = "" if not requires_lab else cls
+
                         entry = {
                             "DIA": day,
                             "INÍCIO": inicio,
                             "TÉRMINO": termino,
                             "CÓDIGO": f"CMP{i+1:03}",
                             "NOME": discipline_name,
-                            "TURMA LAB": turma_lab,  # Aqui "TURMA LAB" vai ser o nome da turma
+                            "TURMA LAB": turma_lab,
                             "PROFESSOR": teacher,
                             "TEÓRICA": "X" if not requires_lab else "",
                             "PRÁTICA": "X" if requires_lab else "",
