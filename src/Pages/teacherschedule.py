@@ -301,12 +301,11 @@ class TimetableApp:
         discipline_dropdown = ttk.Combobox(window, textvariable=discipline_var, state="readonly")
         discipline_dropdown.pack()
 
-        # Atualiza as disciplinas quando uma turma é selecionada
         def update_discipline_options(event):
             selected_class = class_var.get()
             disciplines = self.get_lab_disciplines_for_class(selected_class)
             discipline_dropdown['values'] = disciplines
-            discipline_var.set("")  # Limpa a seleção anterior
+            discipline_var.set("")
 
         class_dropdown.bind("<<ComboboxSelected>>", update_discipline_options)
 
@@ -455,7 +454,6 @@ class TimetableApp:
             self.create_class_table(self.scroll_frame, name, timetable_class)
 
     def create_class_table(self, frame, class_name, timetable_class):
-        # Ordem correta dos dias úteis
         week_order = {
             "Segunda": 0,
             "Terça": 1,
@@ -464,7 +462,6 @@ class TimetableApp:
             "Sexta": 4,
         }
 
-        # Ordena os registros por dia e horário de início
         timetable_class.sort(key=lambda x: (week_order.get(x["DIA"], 99), x["INÍCIO"]))
 
         class_frame = tk.Frame(frame)
@@ -502,14 +499,12 @@ class TimetableApp:
             )
             label.grid(row=1, column=col, sticky="nsew")
 
-        # Linhas com agrupamento por dia
         row = 2
         i = 0
         while i < len(timetable_class):
             current = timetable_class[i]
             day = current["DIA"]
 
-            # Conta quantas vezes o dia se repete consecutivamente
             rowspan = 1
             for j in range(i + 1, len(timetable_class)):
                 if timetable_class[j]["DIA"] == day:
@@ -517,7 +512,6 @@ class TimetableApp:
                 else:
                     break
 
-            # Dia com rowspan
             day_label = tk.Label(
                 class_frame,
                 text=day,
@@ -563,12 +557,11 @@ class TimetableApp:
         if not self.selected_grades:
             messagebox.showwarning("Aviso", "Nenhuma grade selecionada para download.")
             return
-
-        # Janela de opções
+        
         option_window = tk.Toplevel(self.root)
         option_window.title("Escolher formato de exportação")
         option_window.geometry("300x150")
-        option_window.grab_set()  # Torna modal
+        option_window.grab_set() 
 
         excel_var = tk.BooleanVar(value=True)
         pdf_var = tk.BooleanVar(value=False)
