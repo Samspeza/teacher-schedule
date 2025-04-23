@@ -388,13 +388,30 @@ class TimetableApp:
                     discipline_id = discipline_obj['id']
                     requires_lab = discipline_obj.get('requires_laboratory', False)
 
-                    if requires_lab and discipline_id in lab_division_map:
-                        division_count = lab_division_map[discipline_id]
-                        horas_por_divisao = int(discipline_hours[discipline_name] / division_count)
-                        current_division = int(assigned_hours[discipline_id] / horas_por_divisao) + 1
+                    if requires_lab:
+                        division_count = lab_division_map.get(discipline_id, 1)  # padrão: 1 (turma inteira)
+                        horas_disciplina = discipline_hours.get(discipline_name, 0)
+
+                        if division_count <= 0:
+                            print(f"⚠️ Divisão inválida (<= 0) para a disciplina '{discipline_name}' (ID {discipline_id}) na turma '{cls}'. Usando divisão padrão = 1.")
+                            division_count = 1
+
+                        if horas_disciplina <= 0:
+                            print(f"❌ Horas inválidas para a disciplina '{discipline_name}' na turma '{cls}'.")
+                            continue
+
+                        horas_por_divisao = int(horas_disciplina / division_count)
+                        
+                        # Só avisa se for uma divisão real (maior que 1) e ainda assim gerar 0 horas
+                        if division_count > 1 and horas_por_divisao == 0:
+                            print(f"❌ Erro de configuração: disciplina '{discipline_name}' tem divisão = {division_count}, "
+                                f"mas horas totais = {horas_disciplina}, resultando em 0 horas por divisão.")
+                            continue
+
+                        current_division = int(assigned_hours.get(discipline_id, 0) / horas_por_divisao) + 1
                         if current_division > division_count:
                             continue  
-                        if assigned_hours[discipline_id] >= horas_por_divisao * division_count:
+                        if assigned_hours.get(discipline_id, 0) >= horas_por_divisao * division_count:
                             continue
 
                         disciplina_label = f"{discipline_name}"
@@ -842,59 +859,70 @@ class TimetableApp:
         class_select.bind("<<ComboboxSelected>>", load_schedule_table)
 
         def save_manual_schedule():
-                selected_class = class_var.get()
-                if not selected_class:
-                    messagebox.showwarning("Aviso", "Selecione uma turma.")
+            selected_class = class_var.get()
+            if not selected_class:
+                messagebox.showwarning("Aviso", "Selecione uma turma.")
+                return
+
+            schedule = []
+            used_slots = set()
+            teacher_usage = {}
+
+            for entry in entries:
+                day = entry["day"]
+                slot = entry["slot"]
+                discipline = entry["discipline_var"].get()
+                teacher = entry["teacher_var"].get()
+
+                if not discipline or not teacher:
+                    continue
+
+                key = (day, slot)
+                if key in used_slots:
+                    messagebox.showerror("Erro", f"Conflito de horário detectado: {day}, {slot}")
                     return
 
-                schedule = []
-                used_slots = set()
-                teacher_usage = {}
+                if (teacher, day, slot) in teacher_usage:
+                    messagebox.showerror("Erro", f"Professor {teacher} já está alocado em {day} às {slot}.")
+                    return
 
-                for entry in entries:
-                    day = entry["day"]
-                    slot = entry["slot"]
-                    discipline = entry["discipline_var"].get()
-                    teacher = entry["teacher_var"].get()
+                used_slots.add(key)
+                teacher_usage[(teacher, day, slot)] = True
 
-                    if not discipline or not teacher:
-                        continue
+                discipline_obj = next((d for d in discipline_data if d["name"] == discipline), None)
+                pratica = discipline_obj.get("requires_laboratory", False) if discipline_obj else False
 
-                    key = (day, slot)
-                    if key in used_slots:
-                        messagebox.showerror("Erro", f"Conflito de horário detectado: {day}, {slot}")
-                        return
+                schedule.append({
+                    "DIA": day,
+                    "INÍCIO": slot.split(" - ")[0],
+                    "TÉRMINO": slot.split(" - ")[1],
+                    "CÓDIGO": "",
+                    "NOME": discipline,
+                    "TURMA LAB": selected_class if pratica else "",
+                    "PROFESSOR": teacher,
+                    "TEÓRICA": "" if pratica else "X",
+                    "PRÁTICA": "X" if pratica else "",
+                    "ENCONTRO": ""
+                })
 
-                    if (teacher, day, slot) in teacher_usage:
-                        messagebox.showerror("Erro", f"Professor {teacher} já está alocado em {day} às {slot}.")
-                        return
+            # 🚨 VERIFICAÇÕES DE DISCIPLINAS PRÁTICAS E CONFIGURAÇÃO DE LABORATÓRIO
+            for d in schedule:
+                if d["PRÁTICA"] == "X":
+                    disciplina_nome = d["NOME"]
+                    disciplina_obj = next((disc for disc in discipline_data if disc["name"] == disciplina_nome), None)
+                    if disciplina_obj:
+                        disciplina_id = disciplina_obj["id"]
+                        divisoes = self.lab_division_map.get(disciplina_id, 0)
+                        if divisoes == 0:
+                            messagebox.showerror("Erro", f"Disciplina '{disciplina_nome}' requer laboratório, mas não possui divisões configuradas.")
+                            return
 
-                    used_slots.add(key)
-                    teacher_usage[(teacher, day, slot)] = True
+            grade_name = f"{selected_class}_MANUAL"
+            self.manual_timetable[grade_name] = schedule
+            self.selected_grades = [grade_name]
 
-                    discipline_obj = next((d for d in discipline_data if d["name"] == discipline), None)
-                    pratica = discipline_obj.get("requires_laboratory", False) if discipline_obj else False
-
-                    schedule.append({
-                        "DIA": day,
-                        "INÍCIO": slot.split(" - ")[0],
-                        "TÉRMINO": slot.split(" - ")[1],
-                        "CÓDIGO": "",
-                        "NOME": discipline,
-                        "TURMA LAB": selected_class if pratica else "",
-                        "PROFESSOR": teacher,
-                        "TEÓRICA": "" if pratica else "X",
-                        "PRÁTICA": "X" if pratica else "",
-                        "ENCONTRO": ""
-                    })
-
-                grade_name = f"{selected_class}_MANUAL"
-                self.manual_timetable[grade_name] = schedule
-                self.selected_grades = [grade_name]
-
-                manual_schedule_window.destroy()
-                self.show_export_options()
-
+            manual_schedule_window.destroy()
+            self.show_export_options()
 
         save_button = tk.Button(manual_schedule_window, text="Salvar Grade", command=save_manual_schedule, bg="#A0D6B4")
         save_button.pack(pady=10)
