@@ -23,12 +23,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'CSS'))
 from DbContext.database import DB_NAME
 from DbContext.models import get_teachers
 from CSS.style import *
-from UserControl.config import get_available_lab, get_class_course, get_class_id, get_disciplines, get_teacher_availability_for_timetable, get_teacher_data, get_teacher_limits,  coordinator_id, teachers, teacher_limits, classes, days_of_week, time_slots
+from UserControl.config import get_available_lab, get_class_course, get_class_id, get_disciplines, get_laboratories, get_teacher_availability_for_timetable, get_teacher_data, get_teacher_limits,  coordinator_id, teachers, teacher_limits, classes, days_of_week, time_slots
 from ScreenManager import ScreenManager
 from UserControl.sidebar import create_sidebar
 
 class TimetableApp:
     def __init__(self, root, coordinator_id):
+        self.manual_timetable = {}
         self.root = root
         self.coordinator_id = coordinator_id
         self.teachers = self.get_teachers(self.coordinator_id)
@@ -358,6 +359,7 @@ class TimetableApp:
             discipline_hours = {d['name']: d['hours'] for d in class_disciplines}
             assigned_hours = {d['id']: 0 for d in class_disciplines}
             discipline_map = {d['id']: d for d in class_disciplines}
+            
             cursor.execute("""
                 SELECT discipline_id, division_count 
                 FROM lab_division_config 
@@ -590,16 +592,13 @@ class TimetableApp:
             return
 
         for grade_name in self.selected_grades:
-            # Seleciona pasta
             dir_path = filedialog.askdirectory(title="Escolha uma pasta para salvar os arquivos")
-
             if not dir_path:
                 continue
 
-            entries = self.timetable.get(grade_name, [])
+            entries = self.manual_timetable.get(grade_name) or self.timetable.get(grade_name, [])
             headers = ["DIA", "INÍCIO", "TÉRMINO", "CÓDIGO", "NOME", "TURMA LAB", "PROFESSOR", "TEÓRICA", "PRÁTICA", "ENCONTRO"]
 
-            # Conteúdo para salvar no banco
             grade_content = f"Grade de {grade_name}\n"
             grade_content += "\t".join(headers) + "\n"
             for entry in entries:
@@ -637,7 +636,7 @@ class TimetableApp:
                 c.setFont("Helvetica", 10)
                 for entry in entries:
                     line = " | ".join([f"{h}: {entry.get(h, '')}" for h in headers])
-                    c.drawString(50, y, line[:180])  # limita largura
+                    c.drawString(50, y, line[:180])
                     y -= 15
                     if y < 50:
                         c.showPage()
@@ -646,7 +645,7 @@ class TimetableApp:
                 print(f"📄 PDF salvo: {pdf_path}")
 
             # Salva no banco
-            conn = sqlite3.connect(DB_NAME)
+            conn = sqlite3.connect(self.DB_NAME)
             cursor = conn.cursor()
             cursor.execute("""
             INSERT INTO saved_grades (name, content, file_path, coordinator_id)
@@ -789,23 +788,127 @@ class TimetableApp:
     def create_manual_schedule(self):
         manual_schedule_window = tk.Toplevel(self.root)
         manual_schedule_window.title("Criar Grade Manualmente")
-        
+        manual_schedule_window.geometry("800x600")
+
         class_label = tk.Label(manual_schedule_window, text="Escolha a Turma:")
         class_label.pack(pady=8)
-        
-        class_select = ttk.Combobox(manual_schedule_window, values=classes)
+
+        classes = self.get_filtered_classes()
+        class_var = tk.StringVar()
+        class_select = ttk.Combobox(manual_schedule_window, textvariable=class_var, values=classes, state="readonly")
         class_select.pack(pady=8)
-        
+
+        table_frame = tk.Frame(manual_schedule_window)
+        table_frame.pack(pady=10, fill="both", expand=True)
+
+        discipline_data = get_disciplines(self.coordinator_id)
+        teacher_data = get_teacher_data(self.coordinator_id)
+        teachers = list(set(teacher_data))
+        entries = []
+
+        def load_schedule_table(event=None):
+            for widget in table_frame.winfo_children():
+                widget.destroy()
+            selected_class = class_var.get()
+            class_course = get_class_course(selected_class, self.coordinator_id)
+            class_disciplines = [d for d in discipline_data if d['course'] == class_course]
+
+            tk.Label(table_frame, text="DIA").grid(row=0, column=0)
+            tk.Label(table_frame, text="HORÁRIO").grid(row=0, column=1)
+            tk.Label(table_frame, text="DISCIPLINA").grid(row=0, column=2)
+            tk.Label(table_frame, text="PROFESSOR").grid(row=0, column=3)
+
+            row_idx = 1
+            entries.clear()
+
+            for day in days_of_week:
+                for slot in time_slots:
+                    if slot == "20:25 - 20:45":
+                        continue
+
+                    tk.Label(table_frame, text=day).grid(row=row_idx, column=0)
+                    tk.Label(table_frame, text=slot).grid(row=row_idx, column=1)
+
+                    discipline_var = tk.StringVar()
+                    discipline_cb = ttk.Combobox(table_frame, textvariable=discipline_var, values=[d["name"] for d in class_disciplines])
+                    discipline_cb.grid(row=row_idx, column=2)
+
+                    teacher_var = tk.StringVar()
+                    teacher_cb = ttk.Combobox(table_frame, textvariable=teacher_var, values=teachers)
+                    teacher_cb.grid(row=row_idx, column=3)
+
+                    entries.append({
+                        "day": day,
+                        "slot": slot,
+                        "discipline_var": discipline_var,
+                        "teacher_var": teacher_var
+                    })
+
+                    row_idx += 1
+
+        class_select.bind("<<ComboboxSelected>>", load_schedule_table)
+
         def save_manual_schedule():
-            selected_class = class_select.get()
-           
-            self.timetable[selected_class]= selected_class
-            manual_schedule_window.destroy()
-            self.show_timetable()
-        
-        save_button = tk.Button(manual_schedule_window, text="Salvar", command=save_manual_schedule)
-        save_button.pack(pady=8)
-    
+                selected_class = class_var.get()
+                if not selected_class:
+                    messagebox.showwarning("Aviso", "Selecione uma turma.")
+                    return
+
+                schedule = []
+                used_slots = set()
+                teacher_usage = {}
+
+                for entry in entries:
+                    day = entry["day"]
+                    slot = entry["slot"]
+                    discipline = entry["discipline_var"].get()
+                    teacher = entry["teacher_var"].get()
+
+                    if not discipline or not teacher:
+                        continue
+
+                    key = (day, slot)
+                    if key in used_slots:
+                        messagebox.showerror("Erro", f"Conflito de horário detectado: {day}, {slot}")
+                        return
+
+                    if (teacher, day, slot) in teacher_usage:
+                        messagebox.showerror("Erro", f"Professor {teacher} já está alocado em {day} às {slot}.")
+                        return
+
+                    used_slots.add(key)
+                    teacher_usage[(teacher, day, slot)] = True
+
+                    discipline_obj = next((d for d in discipline_data if d["name"] == discipline), None)
+                    pratica = discipline_obj.get("requires_laboratory", False) if discipline_obj else False
+
+                    schedule.append({
+                        "DIA": day,
+                        "INÍCIO": slot.split(" - ")[0],
+                        "TÉRMINO": slot.split(" - ")[1],
+                        "CÓDIGO": "",
+                        "NOME": discipline,
+                        "TURMA LAB": selected_class if pratica else "",
+                        "PROFESSOR": teacher,
+                        "TEÓRICA": "" if pratica else "X",
+                        "PRÁTICA": "X" if pratica else "",
+                        "ENCONTRO": ""
+                    })
+
+                grade_name = f"{selected_class}_MANUAL"
+                self.manual_timetable[grade_name] = schedule
+                self.selected_grades = [grade_name]
+
+                manual_schedule_window.destroy()
+                self.show_export_options()
+
+
+        save_button = tk.Button(manual_schedule_window, text="Salvar Grade", command=save_manual_schedule, bg="#A0D6B4")
+        save_button.pack(pady=10)
+
+        lab_config_button = tk.Button(manual_schedule_window, text="Configurar Laboratórios", command=self.open_lab_config_window, bg="#FFD580")
+        lab_config_button.pack(pady=5)
+
 if __name__ == "__main__":
     root = tk.Tk()
     app = TimetableApp(root)
