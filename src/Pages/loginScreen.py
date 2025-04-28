@@ -3,6 +3,7 @@ from tkinter import messagebox
 import sqlite3
 import sys
 import os
+import bcrypt
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'DbContext'))
@@ -86,16 +87,21 @@ class LoginScreen:
 
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM coordinators WHERE email=? AND password=?", (email, password))
+        cursor.execute("SELECT id, password FROM coordinators WHERE email=?", (email,))
         user = cursor.fetchone()
         conn.close()
 
         if user:
             coordinator_id = user[0]
-            self.root.destroy()
-            main_root = tk.Tk()
-            app = ScreenManager(main_root, coordinator_id)
-            main_root.mainloop()
+            stored_password_hash = user[1]
+
+            if bcrypt.checkpw(password.encode('utf-8'), stored_password_hash):
+                self.root.destroy()
+                main_root = tk.Tk()
+                app = ScreenManager(main_root, coordinator_id)
+                main_root.mainloop()
+            else:
+                messagebox.showerror("Erro", "Email ou senha incorretos!")
         else:
             messagebox.showerror("Erro", "Email ou senha incorretos!")
 
@@ -136,17 +142,18 @@ class LoginScreen:
                 messagebox.showerror("Erro", "Preencha todos os campos!")
                 return
 
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
             cursor.execute("INSERT INTO coordinators (name, email, password, course) VALUES (?, ?, ?, ?)",
-                        (name, email, password, course))
+                           (name, email, hashed_password, course))
             conn.commit()
             conn.close()
 
             messagebox.showinfo("Sucesso", "Coordenador cadastrado com sucesso!")
             register_window.destroy()
 
-        # Botão de cadastrar
         tk.Button(register_window, text="Cadastrar", command=register,
                 bg="#4A90E2", fg="white", font=("Segoe UI", 10, "bold"),
                 width=20, height=2, relief="flat", bd=0,
