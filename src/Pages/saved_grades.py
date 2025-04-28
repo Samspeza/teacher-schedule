@@ -1,6 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import sqlite3
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+import pandas as pd
 import os
 
 class SavedGradesApp:
@@ -57,6 +60,9 @@ class SavedGradesApp:
 
         # Load saved grades
         self.load_saved_grades()
+
+        # Bind double-click to open details
+        self.tree.bind("<Double-1>", self.open_grade_details)
 
     def create_sidebar(self):
         sidebar_frame = tk.Frame(self.root, bg="#007BBD", width=100, height=700)
@@ -124,38 +130,65 @@ class SavedGradesApp:
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao salvar o arquivo: {str(e)}")
 
+    def save_to_pdf(self, grade_name, grade_content):
+        # Save to PDF
+        file_path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF files", "*.pdf")])
+        if file_path:
+            try:
+                c = canvas.Canvas(file_path, pagesize=letter)
+                c.drawString(100, 750, f"Grade: {grade_name}")
+                c.drawString(100, 730, f"Conteúdo: {grade_content}")
+                c.save()
+                messagebox.showinfo("Sucesso", f"Grade salva como PDF em {file_path}")
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao salvar PDF: {str(e)}")
+
+    def save_to_excel(self, grade_name, grade_content):
+        # Save to Excel
+        file_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx")])
+        if file_path:
+            try:
+                df = pd.DataFrame({"Grade": [grade_name], "Conteúdo": [grade_content]})
+                df.to_excel(file_path, index=False)
+                messagebox.showinfo("Sucesso", f"Grade salva como Excel em {file_path}")
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao salvar Excel: {str(e)}")
+
     def delete_grade(self, grade_id):
         # Delete the grade from the database
-        conn = sqlite3.connect('database.db')
+        conn = sqlite3.connect('schedule.db')
         cursor = conn.cursor()
         cursor.execute("DELETE FROM saved_grades WHERE id = ?", (grade_id,))
         conn.commit()
         conn.close()
         self.load_saved_grades()
 
-    def on_save(self):
-        selected = self.tree.selection()
-        if not selected:
-            messagebox.showerror("Erro", "Selecione uma grade para salvar")
+    def open_grade_details(self, event):
+        selected_item = self.tree.selection()
+        if not selected_item:
             return
 
-        grade_id = self.tree.item(selected[0], "values")[0]
-        grade_name = self.tree.item(selected[0], "values")[1]
-        grade_content = self.tree.item(selected[0], "values")[2]
+        grade_id = self.tree.item(selected_item[0], "values")[0]
+        grade_name = self.tree.item(selected_item[0], "values")[1]
+        grade_content = self.tree.item(selected_item[0], "values")[2]
 
-        self.save_grade_to_file(grade_id, grade_name, grade_content)
+        details_window = tk.Toplevel(self.root)
+        details_window.title(f"Detalhes da Grade - {grade_name}")
+        details_window.geometry("600x400")
 
-    def on_delete(self):
-        selected = self.tree.selection()
-        if not selected:
-            messagebox.showerror("Erro", "Selecione uma grade para excluir")
-            return
+        text_box = tk.Text(details_window, wrap="word", height=15, width=70)
+        text_box.insert(tk.END, f"Grade: {grade_name}\n\nConteúdo:\n{grade_content}")
+        text_box.pack(padx=10, pady=10)
 
-        grade_id = self.tree.item(selected[0], "values")[0]
-        self.delete_grade(grade_id)
+        # Buttons to save as PDF or Excel
+        save_pdf_button = ttk.Button(details_window, text="Salvar como PDF", command=lambda: self.save_to_pdf(grade_name, grade_content))
+        save_pdf_button.pack(pady=10)
+
+        save_excel_button = ttk.Button(details_window, text="Salvar como Excel", command=lambda: self.save_to_excel(grade_name, grade_content))
+        save_excel_button.pack(pady=10)
 
 # Running the App
 if __name__ == "__main__":
     root = tk.Tk()
-    app = SaveGradesApp(root, coordinator_id=1)  # Pass coordinator_id as needed
+    app = SavedGradesApp(root, coordinator_id=1)  # Pass coordinator_id as needed
     root.mainloop()
