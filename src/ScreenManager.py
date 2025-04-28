@@ -165,7 +165,6 @@ class ScreenManager:
                               font=("Helvetica", 14), bg="white", fg="#2A72C3", anchor="w")
         value_label.pack(pady=(5, 0))
 
-    # Funções de navegação (mantidas iguais)
     def open_user_profile(self):
         self.root.destroy()
         user_root = tk.Tk()
@@ -196,8 +195,3 @@ class ScreenManager:
         subjects_root = tk.Tk()
         subjects_app = ManageSubjectsApp(subjects_root, self.coordinator_id)
         subjects_root.mainloop()
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = ScreenManager(root, coordinator_id=1)
-    root.mainloop()
