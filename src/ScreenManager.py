@@ -5,8 +5,8 @@ from Pages.saved_grades import SavedGradesApp
 from Pages.manageTeachers import ManageProfessorsApp
 from Pages.userProfileApp import UserProfileApp
 
-from PIL import Image, ImageTk  # Usando Pillow para exibir a imagem
-import io  # Para salvar a imagem em formato de buffer
+from PIL import Image, ImageTk 
+import io 
 
 import tkinter as tk
 from tkinter import ttk
@@ -18,7 +18,7 @@ class ScreenManager:
 
         self.root.title("Teacher Schedule Dashboard")
         self.root.geometry("1200x800")
-        self.root.configure(bg="#F4F6FA")  # Cor de fundo suave
+        self.root.configure(bg="#F4F6FA") 
 
         # Sidebar
         self.sidebar = tk.Frame(self.root, bg="#FFFFFF", width=250)
@@ -83,7 +83,6 @@ class ScreenManager:
         self.create_dashboard_button(button_frame, "Gerenciar Professores", self.open_teachers)
         self.create_dashboard_button(button_frame, "Cadastrar Disciplina", self.open_subjects)
 
-        # Exibição de informações para o coordenador
         self.create_info_panel()
 
     def create_dashboard_button(self, parent, text, command):
@@ -103,8 +102,6 @@ class ScreenManager:
                                               "e garantir a disponibilidade das disciplinas.",
                               font=("Helvetica", 12), bg="#FFFFFF", fg="#666666")
         info_label.pack(pady=10)
-
-        # Perfil do coordenador
         self.create_coordinator_profile(info_frame)
 
     def create_coordinator_profile(self, parent):
@@ -115,7 +112,6 @@ class ScreenManager:
         profile_title = tk.Label(profile_frame, text="Coordenador", font=("Helvetica", 14, "bold"), bg="#FFFFFF", fg="#2A72C3")
         profile_title.pack()
 
-        # Exemplo de dados de coordenador (substituir conforme necessário)
         name_label = tk.Label(profile_frame, text="Nome: João Silva", font=("Helvetica", 12), bg="#FFFFFF", fg="#666666")
         name_label.pack()
 

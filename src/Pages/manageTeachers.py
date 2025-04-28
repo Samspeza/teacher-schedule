@@ -110,7 +110,6 @@ class ManageProfessorsApp:
             where_clause += f" AND LOWER({filter_column}) LIKE ?"
             params.append(f'%{filter_text}%')
 
-        # Contar o total de professores que atendem ao filtro
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute(f"""
@@ -121,11 +120,9 @@ class ManageProfessorsApp:
         total_items = cursor.fetchone()[0]
         conn.close()
 
-        # Calcular o número total de páginas
         self.total_pages = (total_items // self.items_per_page) + (1 if total_items % self.items_per_page else 0)
         self.page_label.config(text=f"Página {self.page_num} de {self.total_pages}")
 
-        # Buscar os professores para a página atual
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute(f"""
@@ -140,11 +137,9 @@ class ManageProfessorsApp:
         professors = cursor.fetchall()
         conn.close()
 
-        # Limpar a tabela de professores exibida
         for row in self.tree.get_children():
             self.tree.delete(row)
 
-        # Preencher a tabela com os dados de professores
         for professor in professors:
             self.tree.insert("", "end", values=professor)
 
@@ -163,7 +158,7 @@ class ManageProfessorsApp:
         fields = {
             "Nome": tk.Entry(form),
             "Limite de Dias": tk.Entry(form),
-            "Disponibilidade": tk.Entry(form),  # Campo para dias de disponibilidade
+            "Disponibilidade": tk.Entry(form),  
         }
 
         for label_text, entry in fields.items():
@@ -201,7 +196,7 @@ class ManageProfessorsApp:
             VALUES (?, ?, ?)
         """, (professor_id, max_days, self.coordinator_id))
 
-        days = availability.split(",")  # Assumindo que a disponibilidade seja uma string separada por vírgulas
+        days = availability.split(",")  
         for day in days:
             cursor.execute("""
                 INSERT INTO teacher_availability (teacher_id, day, coordinator_id)

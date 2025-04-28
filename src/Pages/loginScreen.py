@@ -25,48 +25,55 @@ class LoginScreen:
         self.left_frame = tk.Frame(root, bg="#6BA8E5", width=400, height=500) 
         self.left_frame.place(x=0, y=0)
 
-        logo = tk.Label(self.left_frame, text="Teacher Schedule", font=("Arial", 20, "bold"),
+        logo = tk.Label(self.left_frame, text="Teacher Schedule", font=("Segoe UI", 22, "bold"),
                         bg="#6BA8E5", fg="white")
         logo.place(x=90, y=40)
 
-        tk.Label(self.left_frame, text="Organize suas grades com facilidade", font=("Arial", 11),
+        tk.Label(self.left_frame, text="Organize suas grades com facilidade", font=("Segoe UI", 11),
                  bg="#6BA8E5", fg="white").place(x=75, y=80)
 
-        tk.Label(self.left_frame, text="Novo por aqui?", font=("Arial", 14, "bold"),
+        tk.Label(self.left_frame, text="Novo por aqui?", font=("Segoe UI", 14, "bold"),
                  bg="#6BA8E5", fg="white").place(x=130, y=180)
 
-        tk.Label(self.left_frame, text="Crie uma conta de coordenador", font=("Arial", 10),
+        tk.Label(self.left_frame, text="Crie uma conta de coordenador", font=("Segoe UI", 10),
                  bg="#6BA8E5", fg="white").place(x=105, y=220)
 
         self.register_button = tk.Button(self.left_frame, text="Cadastrar",
                                          bg="white", fg="#6BA8E5",
-                                         font=("Arial", 10, "bold"), relief="solid", bd=2,
-                                         command=self.open_register, width=20)
+                                         font=("Segoe UI", 10, "bold"), relief="flat", bd=0,
+                                         command=self.open_register, width=20, height=2,
+                                         highlightthickness=0, borderwidth=0,
+                                         activebackground="#F5F5F5", activeforeground="#6BA8E5")
         self.register_button.place(x=110, y=270)
 
         # Lado direito - Login
         self.right_frame = tk.Frame(root, bg="#FFFFFF", width=400, height=500)
         self.right_frame.place(x=400, y=0)
 
-        tk.Label(self.right_frame, text="Bem-vindo de volta!", font=("Arial", 14, "bold"),
+        tk.Label(self.right_frame, text="Bem-vindo de volta!", font=("Segoe UI", 14, "bold"),
                  bg="#FFFFFF", fg="#4A4A4A").place(x=130, y=80)
 
-        tk.Label(self.right_frame, text="Entre com seus dados", font=("Arial", 10),
+        tk.Label(self.right_frame, text="Entre com seus dados", font=("Segoe UI", 10),
                  bg="#FFFFFF", fg="gray").place(x=150, y=110)
 
         self.email_entry = self.create_entry(self.right_frame, "EMAIL", 180)
         self.password_entry = self.create_entry(self.right_frame, "SENHA", 230, show="*")
 
         self.login_button = tk.Button(self.right_frame, text="ENTRAR", bg="#4A90E2", fg="white",
-                                      font=("Arial", 10, "bold"), width=20, height=2,
-                                      command=self.login)
+                                      font=("Segoe UI", 10, "bold"), width=20, height=2,
+                                      command=self.login, relief="flat", bd=0,
+                                      highlightthickness=0, borderwidth=0,
+                                      activebackground="#3E77C0", activeforeground="white")
         self.login_button.place(x=120, y=300)
 
     def create_entry(self, parent, placeholder, y, show=None):
-        label = tk.Label(parent, text=placeholder, font=("Arial", 8), bg="#FFFFFF", anchor='w')
+        label = tk.Label(parent, text=placeholder, font=("Segoe UI", 8), bg="#FFFFFF", anchor='w')
         label.place(x=70, y=y - 20)
-        entry = tk.Entry(parent, font=("Arial", 10), width=30, show=show)
+        entry = tk.Entry(parent, font=("Segoe UI", 10), width=30, show=show, bd=0, relief="solid",
+                         highlightthickness=2, highlightcolor="#A9A9A9", highlightbackground="#D3D3D3", 
+                         borderwidth=1)
         entry.place(x=70, y=y)
+        entry.config(borderwidth=2, relief="flat", highlightbackground="#D3D3D3")
         return entry
 
     def login(self):
@@ -100,15 +107,18 @@ class LoginScreen:
         register_window.resizable(False, False)
 
         # Título
-        tk.Label(register_window, text="Cadastro de Coordenador", font=("Arial", 14, "bold"),
+        tk.Label(register_window, text="Cadastro de Coordenador", font=("Segoe UI", 14, "bold"),
                 bg="#F8F8F8", fg="#333").pack(pady=20)
 
         def create_labeled_entry(parent, label_text, show=None):
             frame = tk.Frame(parent, bg="#F8F8F8")
             frame.pack(pady=5)
             tk.Label(frame, text=label_text, bg="#F8F8F8", anchor="w", width=30).pack()
-            entry = tk.Entry(frame, font=("Arial", 10), show=show, width=30)
+            entry = tk.Entry(frame, font=("Segoe UI", 10), show=show, width=30, bd=0, relief="solid",
+                             highlightthickness=2, highlightcolor="#A9A9A9", highlightbackground="#D3D3D3", 
+                             borderwidth=1)
             entry.pack()
+            entry.config(borderwidth=2, relief="flat", highlightbackground="#D3D3D3")
             return entry
 
         name_entry = create_labeled_entry(register_window, "Nome:")
@@ -138,8 +148,10 @@ class LoginScreen:
 
         # Botão de cadastrar
         tk.Button(register_window, text="Cadastrar", command=register,
-                bg="#4A90E2", fg="white", font=("Arial", 10, "bold"),
-                width=20, height=2).pack(pady=20)
+                bg="#4A90E2", fg="white", font=("Segoe UI", 10, "bold"),
+                width=20, height=2, relief="flat", bd=0,
+                highlightthickness=0, borderwidth=0,
+                activebackground="#3E77C0", activeforeground="white").pack(pady=20)
 
 if __name__ == "__main__":
     root = tk.Tk()

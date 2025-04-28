@@ -89,7 +89,7 @@ class ManageSubjectsApp:
         # Ícone de chapéu 🎓 dentro da faixa azul
         self.icon_label = tk.Label(sidebar_frame, text="🎓", font=("Arial", 40), bg="#007BBD", fg="#FFFFFF", cursor="hand2")
         self.icon_label.pack(side="top", padx=20, pady=20)
-        self.icon_label.bind("<Button-1>", self.show_home_screen)  # Ao clicar, voltar para a tela inicial
+        self.icon_label.bind("<Button-1>", self.show_home_screen)  
 
         return sidebar_frame
 
