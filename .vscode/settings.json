@@ -3,6 +3,8 @@
         "./DbContext",
         "./src/DbContext",
         "./src/CSS",
-        "./src/UserControl"
+        "./src/UserControl",
+        "./.venv/Lib/site-packages"
     ]
+
 }
