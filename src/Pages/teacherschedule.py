@@ -686,7 +686,7 @@ class TimetableApp:
         timetable_class.sort(key=lambda x: (week_order.get(x["DIA"], 99), x["INÍCIO"]))
 
         class_frame = tk.Frame(frame)
-        class_frame.pack(pady=10, fill="x", expand=True)
+        class_frame.pack(pady=20, fill="x", expand=True)
 
         title = tk.Label(
             class_frame,
@@ -694,7 +694,7 @@ class TimetableApp:
             font=("Helvetica", 12, "bold"),
             pady=10
         )
-        title.grid(row=0, column=0, columnspan=10)
+        title.grid(row=0, column=0, columnspan=11, sticky="w")
 
         var = tk.BooleanVar()
         checkbox = tk.Checkbutton(
@@ -703,15 +703,13 @@ class TimetableApp:
             variable=var,
             command=lambda: self.select_grade(class_name, var)
         )
-        checkbox.grid(row=0, column=10, padx=10)
+        checkbox.grid(row=0, column=11, padx=20, sticky="e")
 
         headers = ["DIA", "INÍCIO", "TÉRMINO", "CÓDIGO", "NOME", "TURMA LAB", "PROFESSOR", "TEÓRICA", "PRÁTICA", "ENCONTRO"]
 
-        # Tamanho fixo para as colunas
-        fixed_width = 15
-        fixed_height = 1  # Define a altura fixa para as células
+        for col in range(len(headers)):
+            class_frame.grid_columnconfigure(col, weight=1)  # Responsivo
 
-        # Cabeçalhos com largura e altura fixa
         for col, header in enumerate(headers):
             label = tk.Label(
                 class_frame,
@@ -719,9 +717,10 @@ class TimetableApp:
                 font=("Helvetica", 10, "bold"),
                 relief="ridge",
                 borderwidth=1,
-                width=fixed_width,
-                height=fixed_height,  # Define a altura fixa para os cabeçalhos
-                bg="#F5F5F5"
+                bg="#F5F5F5",
+                padx=5,
+                pady=3,
+                anchor="center"
             )
             label.grid(row=1, column=col, sticky="nsew")
 
@@ -744,13 +743,18 @@ class TimetableApp:
                 font=("Helvetica", 9),
                 relief="ridge",
                 borderwidth=1,
-                height=fixed_height  # Define a altura fixa para as células da coluna "DIA"
+                padx=5,
+                pady=2,
+                bg="#E0E0E0",
+                anchor="nw",
+                justify="left"
             )
             day_label.grid(row=row, column=0, rowspan=rowspan, sticky="nsew")
 
-            # Restante das colunas com largura e altura fixa
             for k in range(rowspan):
                 entry = timetable_class[i + k]
+                bg_color = "#FFFFFF" if (row + k) % 2 == 0 else "#F0F0F0"
+
                 for col_idx, header in enumerate(headers[1:], start=1):
                     value = entry.get(header, "")
                     label = tk.Label(
@@ -759,9 +763,12 @@ class TimetableApp:
                         font=("Helvetica", 9),
                         relief="ridge",
                         borderwidth=1,
-                        width=fixed_width,  # Largura fixa
-                        height=fixed_height,  # Altura fixa para as células
-                        anchor="w"  # Alinha o texto à esquerda para evitar corte
+                        padx=5,
+                        pady=2,
+                        anchor="nw",
+                        justify="left",
+                        bg=bg_color,
+                        wraplength=150  # Ajustável conforme o design
                     )
                     label.grid(row=row + k, column=col_idx, sticky="nsew")
 
