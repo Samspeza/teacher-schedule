@@ -707,7 +707,11 @@ class TimetableApp:
 
         headers = ["DIA", "INÍCIO", "TÉRMINO", "CÓDIGO", "NOME", "TURMA LAB", "PROFESSOR", "TEÓRICA", "PRÁTICA", "ENCONTRO"]
 
-        # Cabeçalhos
+        # Tamanho fixo para as colunas
+        fixed_width = 15
+        fixed_height = 1  # Define a altura fixa para as células
+
+        # Cabeçalhos com largura e altura fixa
         for col, header in enumerate(headers):
             label = tk.Label(
                 class_frame,
@@ -715,7 +719,8 @@ class TimetableApp:
                 font=("Helvetica", 10, "bold"),
                 relief="ridge",
                 borderwidth=1,
-                width=14,
+                width=fixed_width,
+                height=fixed_height,  # Define a altura fixa para os cabeçalhos
                 bg="#F5F5F5"
             )
             label.grid(row=1, column=col, sticky="nsew")
@@ -738,11 +743,12 @@ class TimetableApp:
                 text=day,
                 font=("Helvetica", 9),
                 relief="ridge",
-                borderwidth=1
+                borderwidth=1,
+                height=fixed_height  # Define a altura fixa para as células da coluna "DIA"
             )
             day_label.grid(row=row, column=0, rowspan=rowspan, sticky="nsew")
 
-            # Restante das colunas
+            # Restante das colunas com largura e altura fixa
             for k in range(rowspan):
                 entry = timetable_class[i + k]
                 for col_idx, header in enumerate(headers[1:], start=1):
@@ -752,13 +758,15 @@ class TimetableApp:
                         text=value,
                         font=("Helvetica", 9),
                         relief="ridge",
-                        borderwidth=1
+                        borderwidth=1,
+                        width=fixed_width,  # Largura fixa
+                        height=fixed_height,  # Altura fixa para as células
+                        anchor="w"  # Alinha o texto à esquerda para evitar corte
                     )
                     label.grid(row=row + k, column=col_idx, sticky="nsew")
 
             i += rowspan
             row += rowspan
-
 
     def select_grade(self, grade_name, var):
         if var.get():
