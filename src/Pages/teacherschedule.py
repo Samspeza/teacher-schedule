@@ -422,14 +422,11 @@ class TimetableApp:
         division_entry = ttk.Entry(config_frame, textvariable=self.division_var)
         division_entry.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
         
-        # Update disciplines when class is selected
         class_dropdown.bind("<<ComboboxSelected>>", self.update_lab_disciplines)
-        
-        # Save button
+
         save_btn = ttk.Button(config_frame, text="Salvar Configuração", command=self.save_lab_config)
         save_btn.grid(row=3, column=0, columnspan=2, pady=10)
         
-        # Double click to edit existing config
         self.lab_tree.bind("<Double-1>", self.edit_lab_config)
 
     def load_lab_config_data(self):
@@ -437,11 +434,9 @@ class TimetableApp:
         conn = sqlite3.connect(self.DB_NAME)
         cursor = conn.cursor()
         
-        # Clear existing data
         for item in self.lab_tree.get_children():
             self.lab_tree.delete(item)
-        
-        # Get all classes with lab disciplines
+
         cursor.execute("""
             SELECT c.name, c.student_count, d.name, 
                 (SELECT COUNT(*) FROM lab_division_config ldc 
@@ -459,7 +454,6 @@ class TimetableApp:
                                 values=(class_name, student_count, discipline_name, divisions, configured),
                                 tags=('configured' if configured == "✔" else 'not_configured'))
         
-        # Configure tag colors
         self.lab_tree.tag_configure('configured', background='#e6ffe6')
         self.lab_tree.tag_configure('not_configured', background='#ffe6e6')
         
@@ -476,7 +470,6 @@ class TimetableApp:
         self.discipline_var.set("")
 
     def edit_lab_config(self, event):
-        """Edit configuration when double-clicking a row"""
         item = self.lab_tree.selection()[0]
         values = self.lab_tree.item(item, 'values')
         
@@ -485,7 +478,6 @@ class TimetableApp:
         self.division_var.set(values[3] if values[3] != '0' else "")
 
     def save_lab_config(self):
-        """Save lab configuration and refresh the table without closing the window"""
         selected_class_name = self.class_var.get()
         selected_discipline_name = self.discipline_var.get()
         division_count_str = self.division_var.get()
@@ -503,14 +495,9 @@ class TimetableApp:
             return
         
         self.save_lab_division_config(selected_class_name, selected_discipline_name, division_count)
-        
-        # Refresh the table to show updates
         self.load_lab_config_data()
-        
-        # Clear only the division field to allow quick new entries
         self.division_var.set("")
         
-        # Show success message
         messagebox.showinfo("Sucesso", f"Configuração salva com sucesso!\n"
                         f"Turma: {selected_class_name}\n"
                         f"Disciplina: {selected_discipline_name}\n"
