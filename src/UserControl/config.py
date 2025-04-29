@@ -25,6 +25,21 @@ def get_available_lab(cursor, day, used_labs, coordinator_id):
 
     return None
 
+def get_discipline_id_by_name(self, discipline_name):
+        conn = sqlite3.connect(self.DB_NAME)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT id
+            FROM disciplines
+            WHERE name = ? AND coordinator_id = ?
+        """, (discipline_name, self.coordinator_id))
+
+        result = cursor.fetchone()
+        conn.close()
+
+        return result[0] if result else None
+
 def get_laboratories(coordinator_id):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()

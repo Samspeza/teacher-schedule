@@ -24,7 +24,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'CSS'))
 from DbContext.database import DB_NAME
 from DbContext.models import get_teachers
 from CSS.style import *
-from UserControl.config import get_available_lab, get_class_course, get_class_id, get_disciplines, get_laboratories, get_teacher_availability_for_timetable, get_teacher_data, get_teacher_limits,  coordinator_id, teachers, teacher_limits, classes, days_of_week, time_slots
+from UserControl.config import get_available_lab, get_class_course, get_class_id, get_discipline_id_by_name, get_disciplines, get_laboratories, get_teacher_availability_for_timetable, get_teacher_data, get_teacher_limits,  coordinator_id, teachers, teacher_limits, classes, days_of_week, time_slots
 from ScreenManager import ScreenManager
 from UserControl.sidebar import create_sidebar
 
@@ -266,161 +266,257 @@ class TimetableApp:
         disciplines = [row[0] for row in cursor.fetchall()]
         conn.close()
         return disciplines
-
-    def save_lab_division_config(self, class_name, discipline_name, division_count):
-            conn = sqlite3.connect(self.DB_NAME)
-            cursor = conn.cursor()
-            
-            cursor.execute("SELECT id FROM classes WHERE name = ? AND coordinator_id = ?", (class_name, self.coordinator_id))
-            class_id = cursor.fetchone()
-
-            cursor.execute("SELECT id FROM disciplines WHERE name = ? AND coordinator_id = ?", (discipline_name, self.coordinator_id))
-            discipline_id = cursor.fetchone()
-
-            if class_id and discipline_id:
-                cursor.execute("""
-                    INSERT INTO lab_division_config (class_id, discipline_id, division_count, coordinator_id)
-                    VALUES (?, ?, ?, ?)
-                """, (class_id[0], discipline_id[0], division_count, self.coordinator_id))
-                conn.commit()
-
-            conn.close()
-            
-    def open_lab_config_window(self, event=None):
-        window = tk.Toplevel()
-        window.title("Configurar Divisão de Laboratório")
-        window.geometry("400x350")
-
+    
+    def get_lab_name_for_discipline(self, discipline_name):
         conn = sqlite3.connect(self.DB_NAME)
         cursor = conn.cursor()
 
-        # Buscar Turmas
-        cursor.execute("SELECT id, name, course FROM classes WHERE coordinator_id = ?", (self.coordinator_id,))
-        classes = cursor.fetchall()
-        class_options = {name: {"id": id_, "course": course} for id_, name, course in classes}
+        cursor.execute("""
+            SELECT l.name
+            FROM disciplines d
+            JOIN laboratories l ON d.laboratory_id = l.id
+            WHERE d.name = ? AND d.coordinator_id = ?
+        """, (discipline_name, self.coordinator_id))
 
+        result = cursor.fetchone()
         conn.close()
 
-        # Widgets
-        tk.Label(window, text="Turma:").pack(pady=5)
-        class_var = tk.StringVar()
-        class_dropdown = ttk.Combobox(window, textvariable=class_var, values=list(class_options.keys()), state="readonly")
-        class_dropdown.pack()
+        return result[0] if result else None
+    
+    def get_discipline_id_by_name(self, discipline_name):
+        conn = sqlite3.connect(self.DB_NAME)
+        cursor = conn.cursor()
 
-        tk.Label(window, text="Disciplina:").pack(pady=5)
-        discipline_var = tk.StringVar()
-        discipline_dropdown = ttk.Combobox(window, textvariable=discipline_var, state="readonly")
-        discipline_dropdown.pack()
+        cursor.execute("""
+            SELECT id
+            FROM disciplines
+            WHERE name = ? AND coordinator_id = ?
+        """, (discipline_name, self.coordinator_id))
 
-        tk.Label(window, text="Quantidade de Divisões:").pack(pady=5)
-        division_var = tk.StringVar()
-        division_entry = ttk.Entry(window, textvariable=division_var)
-        division_entry.pack()
+        result = cursor.fetchone()
+        conn.close()
 
-        def update_disciplines(event):
-            selected_class = class_var.get()
-            if not selected_class:
-                return
+        return result[0] if result else None
 
-            conn = sqlite3.connect(self.DB_NAME)
-            cursor = conn.cursor()
+    def save_lab_division_config(self, class_name, discipline_name, division_count):
+        conn = sqlite3.connect(self.DB_NAME)
+        cursor = conn.cursor()
 
-            cursor.execute("""
-                SELECT d.id, d.name
-                FROM disciplines d
-                JOIN classes c ON d.course = c.course
-                WHERE c.name = ? AND d.requires_laboratory = 1 AND d.coordinator_id = ?
-            """, (selected_class, self.coordinator_id))
+        class_id = get_class_id(class_name, self.coordinator_id)
+        discipline_id = self.get_discipline_id_by_name(discipline_name)
 
-            disciplines = cursor.fetchall()
-            conn.close()
+        lab_name = self.get_lab_name_for_discipline(discipline_name)
 
-            discipline_options.clear()
-            for id_, name in disciplines:
-                discipline_options[name] = id_
-
-            discipline_dropdown["values"] = list(discipline_options.keys())
-            discipline_var.set("")
-
-        discipline_options = {}
-
-        class_dropdown.bind("<<ComboboxSelected>>", update_disciplines)
-
-        def save_lab_config():
-            selected_class = class_var.get()
-            selected_discipline = discipline_var.get()
-            division_count = division_var.get()
-
-            if not selected_class or not selected_discipline or not division_count.isdigit():
-                messagebox.showerror("Erro", "Preencha todos os campos corretamente!")
-                return
-
-            class_id = class_options[selected_class]["id"]
-            discipline_id = discipline_options[selected_discipline]
-            division_count = int(division_count)
-
-            conn = sqlite3.connect(self.DB_NAME)
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO lab_division_config (class_id, discipline_id, division_count, coordinator_id)
-                VALUES (?, ?, ?, ?)
-            """, (class_id, discipline_id, division_count, self.coordinator_id))
-            conn.commit()
-            conn.close()
-
-            messagebox.showinfo("Sucesso", "Configuração salva com sucesso!")
-            window.destroy()
-
-        tk.Button(window, text="Salvar", command=save_lab_config).pack(pady=20)
-
-        def open_lab_config_window(self):
-            window = tk.Toplevel(self.root)
-            window.title("Configurar Laboratórios")
-            window.geometry("400x300")
+        # Se a disciplina não tiver laboratório associado, cria um novo laboratório
+        if not lab_name:
+            # Nome genérico baseado no nome da disciplina
+            generated_lab_name = f"Lab - {discipline_name}"
             
-            tk.Label(window, text="Turma:").pack(pady=5)
-            class_var = tk.StringVar()
-            class_options = self.get_filtered_classes()
-            class_dropdown = ttk.Combobox(window, textvariable=class_var, values=class_options, state="readonly")
-            class_dropdown.pack()
+            # Insere novo laboratório
+            cursor.execute("""
+                INSERT INTO laboratories (name, available_days, daily_limit, coordinator_id)
+                VALUES (?, ?, ?, ?)
+            """, (generated_lab_name, "Segunda,Terça,Quarta,Quinta,Sexta", 4, self.coordinator_id))
+            
+            lab_id = cursor.lastrowid
 
-            tk.Label(window, text="Disciplina com Laboratório:").pack(pady=5)
-            discipline_var = tk.StringVar()
-            discipline_dropdown = ttk.Combobox(window, textvariable=discipline_var, state="readonly")
-            discipline_dropdown.pack()
+            # Atualiza a disciplina para associar com o novo laboratório
+            cursor.execute("""
+                UPDATE disciplines
+                SET laboratory_id = ?
+                WHERE id = ?
+            """, (lab_id, discipline_id))
 
-            def update_discipline_options(event):
-                selected_class = class_var.get()
-                disciplines = self.get_lab_disciplines_for_class(selected_class)
-                discipline_dropdown['values'] = disciplines
-                discipline_var.set("")
+            lab_name = generated_lab_name
 
-            class_dropdown.bind("<<ComboboxSelected>>", update_discipline_options)
+        # Remove divisões anteriores (caso o usuário queira sobrescrever)
+        cursor.execute("""
+            DELETE FROM lab_division_config
+            WHERE class_id = ? AND discipline_id = ? AND coordinator_id = ?
+        """, (class_id, discipline_id, self.coordinator_id))
 
-            tk.Label(window, text="Quantidade de Divisões:").pack(pady=5)
-            division_entry = tk.Entry(window)
-            division_entry.pack()
+        # Insere as novas divisões
+        for i in range(1, division_count + 1):
+            cursor.execute("""
+                INSERT INTO lab_division_config (class_id, discipline_id, division_number, lab_name, coordinator_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (class_id, discipline_id, i, lab_name, self.coordinator_id))
 
-            def save_config():
-                class_name = class_var.get()
-                discipline_name = discipline_var.get()
-                division_count = division_entry.get()
-
-                if not class_name or not discipline_name or not division_count.isdigit():
-                    messagebox.showwarning("Atenção", "Preencha todos os campos corretamente.")
-                    return
-
-                self.save_lab_division_config(class_name, discipline_name, int(division_count))
-                messagebox.showinfo("Sucesso", "Configuração salva com sucesso!")
-                window.destroy()
-
-            save_btn = tk.Button(window, text="Salvar", command=save_config, bg="#B4E197")
-            save_btn.pack(pady=20)
+        conn.commit()
+        conn.close()
 
 
-    #em configuração de laboratorio, preciso que seja possivel dar a entrada de quantas turmas serão disponibilizadas e o codigo precisa respeitar a quantidade certa para a geração das grades. Além disso, o nome do laboratorio nao é o nome da turma e sim o nome do lab cadastrado que vai ser responsavel por alocar a turma e o professor. Se tem duas tumas de laboratorio, a grade precisa mostrar essas duas turmas no dia certo com cada professor para cada lab e as demais aulas, se eu tenho 2 turmas por ex a garde continua mostrando apenas uma. Tudo isso precisa respeitar os dias e horarios das aulas
+    def open_lab_config_window(self, event=None):
+        window = tk.Toplevel()
+        window.title("Configuração de Laboratórios")
+        window.geometry("1000x600")
+        
+        # Main container
+        main_frame = ttk.Frame(window)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Title
+        ttk.Label(main_frame, text="Configuração de Divisões de Laboratório", 
+                font=('Helvetica', 12, 'bold')).pack(pady=10)
+        
+        # Treeview frame
+        tree_frame = ttk.Frame(main_frame)
+        tree_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Scrollbars
+        y_scroll = ttk.Scrollbar(tree_frame)
+        y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        x_scroll = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL)
+        x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+        
+        # Treeview
+        columns = ('class', 'students', 'discipline', 'current_divisions', 'configured')
+        self.lab_tree = ttk.Treeview(
+            tree_frame, 
+            columns=columns, 
+            show='headings',
+            yscrollcommand=y_scroll.set,
+            xscrollcommand=x_scroll.set
+        )
+        
+        # Configure columns
+        self.lab_tree.heading('class', text='Turma')
+        self.lab_tree.heading('students', text='Alunos')
+        self.lab_tree.heading('discipline', text='Disciplina')
+        self.lab_tree.heading('current_divisions', text='Divisões Atuais')
+        self.lab_tree.heading('configured', text='Configurado?')
+        
+        self.lab_tree.column('class', width=150, anchor=tk.W)
+        self.lab_tree.column('students', width=80, anchor=tk.CENTER)
+        self.lab_tree.column('discipline', width=250, anchor=tk.W)
+        self.lab_tree.column('current_divisions', width=120, anchor=tk.CENTER)
+        self.lab_tree.column('configured', width=100, anchor=tk.CENTER)
+        
+        self.lab_tree.pack(fill=tk.BOTH, expand=True)
+        
+        y_scroll.config(command=self.lab_tree.yview)
+        x_scroll.config(command=self.lab_tree.xview)
+        
+        # Load initial data
+        self.load_lab_config_data()
+        
+        # Configuration frame
+        config_frame = ttk.Frame(main_frame)
+        config_frame.pack(fill=tk.X, pady=10)
+        
+        # Class and discipline selection
+        ttk.Label(config_frame, text="Turma:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        self.class_var = tk.StringVar()
+        class_options = self.get_filtered_classes()
+        class_dropdown = ttk.Combobox(config_frame, textvariable=self.class_var, values=class_options, state="readonly")
+        class_dropdown.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
+        
+        ttk.Label(config_frame, text="Disciplina:").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+        self.discipline_var = tk.StringVar()
+        self.discipline_dropdown = ttk.Combobox(config_frame, textvariable=self.discipline_var, state="readonly")
+        self.discipline_dropdown.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+        
+        ttk.Label(config_frame, text="Divisões:").grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
+        self.division_var = tk.StringVar()
+        division_entry = ttk.Entry(config_frame, textvariable=self.division_var)
+        division_entry.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
+        
+        # Update disciplines when class is selected
+        class_dropdown.bind("<<ComboboxSelected>>", self.update_lab_disciplines)
+        
+        # Save button
+        save_btn = ttk.Button(config_frame, text="Salvar Configuração", command=self.save_lab_config)
+        save_btn.grid(row=3, column=0, columnspan=2, pady=10)
+        
+        # Double click to edit existing config
+        self.lab_tree.bind("<Double-1>", self.edit_lab_config)
 
+    def load_lab_config_data(self):
+        """Load all classes and disciplines that need lab allocation"""
+        conn = sqlite3.connect(self.DB_NAME)
+        cursor = conn.cursor()
+        
+        # Clear existing data
+        for item in self.lab_tree.get_children():
+            self.lab_tree.delete(item)
+        
+        # Get all classes with lab disciplines
+        cursor.execute("""
+            SELECT c.name, c.student_count, d.name, 
+                (SELECT COUNT(*) FROM lab_division_config ldc 
+                    WHERE ldc.class_id = c.id AND ldc.discipline_id = d.id AND ldc.coordinator_id = ?) as divisions
+            FROM classes c
+            JOIN disciplines d ON d.course = c.name
+            WHERE d.requires_laboratory = 1 AND d.coordinator_id = ?
+            ORDER BY c.name, d.name
+        """, (self.coordinator_id, self.coordinator_id))
+        
+        for row in cursor.fetchall():
+            class_name, student_count, discipline_name, divisions = row
+            configured = "✔" if divisions > 0 else "✖"
+            self.lab_tree.insert('', tk.END, 
+                                values=(class_name, student_count, discipline_name, divisions, configured),
+                                tags=('configured' if configured == "✔" else 'not_configured'))
+        
+        # Configure tag colors
+        self.lab_tree.tag_configure('configured', background='#e6ffe6')
+        self.lab_tree.tag_configure('not_configured', background='#ffe6e6')
+        
+        conn.close()
 
+    def update_lab_disciplines(self, event=None):
+        """Update discipline dropdown based on selected class"""
+        selected_class_name = self.class_var.get()
+        if not selected_class_name:
+            return
+        
+        disciplines = self.get_lab_disciplines_for_class(selected_class_name)
+        self.discipline_dropdown['values'] = disciplines
+        self.discipline_var.set("")
+
+    def edit_lab_config(self, event):
+        """Edit configuration when double-clicking a row"""
+        item = self.lab_tree.selection()[0]
+        values = self.lab_tree.item(item, 'values')
+        
+        self.class_var.set(values[0])
+        self.discipline_var.set(values[2])
+        self.division_var.set(values[3] if values[3] != '0' else "")
+
+    def save_lab_config(self):
+        """Save lab configuration and refresh the table without closing the window"""
+        selected_class_name = self.class_var.get()
+        selected_discipline_name = self.discipline_var.get()
+        division_count_str = self.division_var.get()
+        
+        if not selected_class_name or not selected_discipline_name or not division_count_str.isdigit():
+            messagebox.showerror("Erro", "Preencha todos os campos corretamente!")
+            return
+        
+        try:
+            division_count = int(division_count_str)
+            if division_count <= 0:
+                raise ValueError
+        except ValueError:
+            messagebox.showerror("Erro", "O número de divisões deve ser um inteiro positivo!")
+            return
+        
+        self.save_lab_division_config(selected_class_name, selected_discipline_name, division_count)
+        
+        # Refresh the table to show updates
+        self.load_lab_config_data()
+        
+        # Clear only the division field to allow quick new entries
+        self.division_var.set("")
+        
+        # Show success message
+        messagebox.showinfo("Sucesso", f"Configuração salva com sucesso!\n"
+                        f"Turma: {selected_class_name}\n"
+                        f"Disciplina: {selected_discipline_name}\n"
+                        f"Divisões: {division_count}")
+        
+        
     def generate_timetable(self):
         conn = sqlite3.connect(self.DB_NAME)
         cursor = conn.cursor()
@@ -434,13 +530,17 @@ class TimetableApp:
             print("⚠️ Nenhuma turma encontrada para este coordenador.")
             return {}
 
+        # Estruturas para controle
         timetable = {
             cls: {day: [['', ''] for _ in time_slots] for day in days_of_week}
             for cls in classes
         }
         timetable_entries = {cls: [] for cls in classes}
-        availability_per_teacher = get_teacher_availability_for_timetable(teacher_limits, teachers)
-        used_labs = {}
+        teacher_availability = get_teacher_availability_for_timetable(teacher_limits, teachers)
+        
+        # Dicionários para rastrear alocações
+        teacher_load = {t: 0 for t in teachers}  
+        teacher_schedule = {t: {day: [] for day in days_of_week} for t in teachers} 
 
         for cls in classes:
             class_course = get_class_course(cls, self.coordinator_id)
@@ -448,25 +548,21 @@ class TimetableApp:
 
             discipline_hours = {d['name']: d['hours'] for d in class_disciplines}
             assigned_hours = {d['id']: 0 for d in class_disciplines}
-            discipline_map = {d['id']: d for d in class_disciplines}
 
             class_id = get_class_id(cls, self.coordinator_id)
 
-            # Buscar divisões de laboratório para a turma
+            # Buscar divisões de laboratório
             cursor.execute("""
-                SELECT discipline_id, division_number, lab_name, coordinator_id
+                SELECT discipline_id, division_number, lab_name 
                 FROM lab_division_config 
                 WHERE class_id = ? AND coordinator_id = ?
             """, (class_id, self.coordinator_id))
-
             lab_divisions = cursor.fetchall()
-
-            lab_division_map = {}  # discipline_id -> lista de divisões
-            for discipline_id, division_number, lab_name, coordinator_id in lab_divisions:
+            lab_division_map = {}
+            for discipline_id, division_number, lab_name in lab_divisions:
                 lab_division_map.setdefault(discipline_id, []).append({
                     "division_number": division_number,
-                    "lab_name": lab_name,
-                    "coordinator_id": coordinator_id
+                    "lab_name": lab_name
                 })
 
             for day in days_of_week:
@@ -475,15 +571,14 @@ class TimetableApp:
                         continue  # intervalo
 
                     inicio, termino = time_slot.split(" - ")
-                    available_teachers_for_day = [
-                        t for t in teachers if day in availability_per_teacher.get(t, [])
-                    ]
-
+                    
+                    # Disciplinas que ainda precisam de horas
                     possible_disciplines = [
-                        d for d in class_disciplines if assigned_hours[d['id']] < discipline_hours[d['name']]
+                        d for d in class_disciplines 
+                        if assigned_hours[d['id']] < discipline_hours[d['name']]
                     ]
+                    
                     if not possible_disciplines:
-                        timetable[cls][day][i] = ["", ""]
                         continue
 
                     discipline_obj = random.choice(possible_disciplines)
@@ -491,65 +586,84 @@ class TimetableApp:
                     discipline_id = discipline_obj['id']
                     requires_lab = discipline_obj.get('requires_laboratory', False)
 
-                    # Se for prática
-                    if requires_lab:
-                        divisons = lab_division_map.get(discipline_id, [])
-                        if not divisons:
-                            print(f"⚠️ Nenhuma divisão cadastrada para disciplina prática '{discipline_name}'.")
-                            continue
+                    # Encontrar professor disponível
+                    available_teachers = [
+                        t for t in teachers 
+                        if day in teacher_availability.get(t, []) and
+                        time_slot not in teacher_schedule[t][day]
+                    ]
 
-                        # Escolhe uma divisão que ainda tenha carga para preencher
-                        division = random.choice(divisons)
-                        lab_name = division["lab_name"]
-                        division_number = division["division_number"]
-                        coordinator_id = division.get("coordinator_id")
+                    # Ordenar por professores com menos aulas alocadas
+                    available_teachers.sort(key=lambda t: teacher_load[t])
+                    teacher = available_teachers[0] if available_teachers else None
 
-                        turma_lab = lab_name if lab_name else ""
-                        disciplina_label = f"{discipline_name} - D{division_number}"
+                    if requires_lab and discipline_id in lab_division_map:
+                        # Processar aula prática
+                        for division in lab_division_map[discipline_id]:
+                            if assigned_hours[discipline_id] >= discipline_hours[discipline_name]:
+                                break
 
-                        possible_teachers = [t for t in available_teachers_for_day if day not in self.teacher_allocations.get(t, set())]
-                        teacher = random.choice(possible_teachers) if possible_teachers else ""
+                            lab_name = division["lab_name"]
+                            division_number = division["division_number"]
+                            disciplina_label = f"{discipline_name} - D{division_number}"
 
-                        entry = {
-                            "DIA": day,
-                            "INÍCIO": inicio,
-                            "TÉRMINO": termino,
-                            "CÓDIGO": f"CMP{i+1:03}-D{division_number}",
-                            "NOME": discipline_name,
-                            "TURMA LAB": turma_lab,
-                            "PROFESSOR": teacher or "A definir",
-                            "TEÓRICA": "",
-                            "PRÁTICA": "X",
-                            "ENCONTRO": ""
-                        }
+                            entry = {
+                                "DIA": day,
+                                "INÍCIO": inicio,
+                                "TÉRMINO": termino,
+                                "CÓDIGO": f"CMP{i+1:03}-D{division_number}",
+                                "NOME": discipline_name,
+                                "TURMA LAB": lab_name,
+                                "PROFESSOR": teacher or "A definir",
+                                "TEÓRICA": "",
+                                "PRÁTICA": "X",
+                                "ENCONTRO": ""
+                            }
 
-                    # Se for disciplina normal (sem laboratório)
-                    else:
-                        disciplina_label = discipline_name
-                        turma_lab = cls
-                        teacher = random.choice(available_teachers_for_day) if available_teachers_for_day else ""
+                            assigned_hours[discipline_id] += 1
+                            if teacher:
+                                teacher_load[teacher] += 1
+                                teacher_schedule[teacher][day].append(time_slot)
+                            timetable[cls][day][i] = [disciplina_label, teacher or "A definir"]
+                            timetable_entries[cls].append(entry)
+                        continue
 
-                        entry = {
-                            "DIA": day,
-                            "INÍCIO": inicio,
-                            "TÉRMINO": termino,
-                            "CÓDIGO": f"CMP{i+1:03}",
-                            "NOME": discipline_name,
-                            "TURMA LAB": "",
-                            "PROFESSOR": teacher or "A definir",
-                            "TEÓRICA": "X",
-                            "PRÁTICA": "",
-                            "ENCONTRO": ""
-                        }
+                    # Processar aula teórica
+                    disciplina_label = discipline_name
+                    entry = {
+                        "DIA": day,
+                        "INÍCIO": inicio,
+                        "TÉRMINO": termino,
+                        "CÓDIGO": f"CMP{i+1:03}",
+                        "NOME": discipline_name,
+                        "TURMA LAB": "",
+                        "PROFESSOR": teacher or "A definir",
+                        "TEÓRICA": "X",
+                        "PRÁTICA": "",
+                        "ENCONTRO": ""
+                    }
 
                     assigned_hours[discipline_id] += 1
-                    self.teacher_allocations.setdefault(teacher, set()).add(day)
-                    timetable[cls][day][i] = [disciplina_label, teacher]
+                    if teacher:
+                        teacher_load[teacher] += 1
+                        teacher_schedule[teacher][day].append(time_slot)
+                    timetable[cls][day][i] = [disciplina_label, teacher or "A definir"]
                     timetable_entries[cls].append(entry)
 
         conn.close()
+        
+        # Verificação final
+        undefined_teachers = sum(1 for cls in timetable_entries for entry in timetable_entries[cls] if entry["PROFESSOR"] == "A definir")
+        total_classes = sum(len(entries) for entries in timetable_entries.values())
+        
+        if undefined_teachers > 0:
+            print(f"⚠️ Aviso: {undefined_teachers} de {total_classes} aulas sem professor alocado")
+            print("Possíveis soluções:")
+            print("1. Verifique a disponibilidade dos professores")
+            print("2. Contrate mais professores")
+            print("3. Redistribua as disciplinas entre os professores existentes")
+        
         return timetable_entries
-
 
     def show_timetable(self):
         for widget in self.scroll_frame.winfo_children():
