@@ -156,17 +156,17 @@ def create_tables():
     """)
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS lab_division_config (
+        CREATE TABLE IF NOT EXISTS lab_division_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         class_id INTEGER NOT NULL,
         discipline_id INTEGER NOT NULL,
-        division_count INTEGER NOT NULL,
+        division_number INTEGER NOT NULL,
+        lab_name TEXT NOT NULL,            
         coordinator_id INTEGER,
         FOREIGN KEY (class_id) REFERENCES classes(id),
         FOREIGN KEY (discipline_id) REFERENCES disciplines(id),
         FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
-
     """)
 
     cursor.execute("""

@@ -1,3 +1,4 @@
+from multiprocessing import connection
 from os import name
 import sqlite3
 import tkinter as tk
@@ -285,49 +286,137 @@ class TimetableApp:
 
             conn.close()
             
-    def open_lab_config_window(self):
-        window = tk.Toplevel(self.root)
-        window.title("Configurar Laboratórios")
-        window.geometry("400x300")
-        
+    def open_lab_config_window(self, event=None):
+        window = tk.Toplevel()
+        window.title("Configurar Divisão de Laboratório")
+        window.geometry("400x350")
+
+        conn = sqlite3.connect(self.DB_NAME)
+        cursor = conn.cursor()
+
+        # Buscar Turmas
+        cursor.execute("SELECT id, name, course FROM classes WHERE coordinator_id = ?", (self.coordinator_id,))
+        classes = cursor.fetchall()
+        class_options = {name: {"id": id_, "course": course} for id_, name, course in classes}
+
+        conn.close()
+
+        # Widgets
         tk.Label(window, text="Turma:").pack(pady=5)
         class_var = tk.StringVar()
-        class_options = self.get_filtered_classes()
-        class_dropdown = ttk.Combobox(window, textvariable=class_var, values=class_options, state="readonly")
+        class_dropdown = ttk.Combobox(window, textvariable=class_var, values=list(class_options.keys()), state="readonly")
         class_dropdown.pack()
 
-        tk.Label(window, text="Disciplina com Laboratório:").pack(pady=5)
+        tk.Label(window, text="Disciplina:").pack(pady=5)
         discipline_var = tk.StringVar()
         discipline_dropdown = ttk.Combobox(window, textvariable=discipline_var, state="readonly")
         discipline_dropdown.pack()
 
-        def update_discipline_options(event):
-            selected_class = class_var.get()
-            disciplines = self.get_lab_disciplines_for_class(selected_class)
-            discipline_dropdown['values'] = disciplines
-            discipline_var.set("")
-
-        class_dropdown.bind("<<ComboboxSelected>>", update_discipline_options)
-
         tk.Label(window, text="Quantidade de Divisões:").pack(pady=5)
-        division_entry = tk.Entry(window)
+        division_var = tk.StringVar()
+        division_entry = ttk.Entry(window, textvariable=division_var)
         division_entry.pack()
 
-        def save_config():
-            class_name = class_var.get()
-            discipline_name = discipline_var.get()
-            division_count = division_entry.get()
-
-            if not class_name or not discipline_name or not division_count.isdigit():
-                messagebox.showwarning("Atenção", "Preencha todos os campos corretamente.")
+        def update_disciplines(event):
+            selected_class = class_var.get()
+            if not selected_class:
                 return
 
-            self.save_lab_division_config(class_name, discipline_name, int(division_count))
+            conn = sqlite3.connect(self.DB_NAME)
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                SELECT d.id, d.name
+                FROM disciplines d
+                JOIN classes c ON d.course = c.course
+                WHERE c.name = ? AND d.requires_laboratory = 1 AND d.coordinator_id = ?
+            """, (selected_class, self.coordinator_id))
+
+            disciplines = cursor.fetchall()
+            conn.close()
+
+            discipline_options.clear()
+            for id_, name in disciplines:
+                discipline_options[name] = id_
+
+            discipline_dropdown["values"] = list(discipline_options.keys())
+            discipline_var.set("")
+
+        discipline_options = {}
+
+        class_dropdown.bind("<<ComboboxSelected>>", update_disciplines)
+
+        def save_lab_config():
+            selected_class = class_var.get()
+            selected_discipline = discipline_var.get()
+            division_count = division_var.get()
+
+            if not selected_class or not selected_discipline or not division_count.isdigit():
+                messagebox.showerror("Erro", "Preencha todos os campos corretamente!")
+                return
+
+            class_id = class_options[selected_class]["id"]
+            discipline_id = discipline_options[selected_discipline]
+            division_count = int(division_count)
+
+            conn = sqlite3.connect(self.DB_NAME)
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO lab_division_config (class_id, discipline_id, division_count, coordinator_id)
+                VALUES (?, ?, ?, ?)
+            """, (class_id, discipline_id, division_count, self.coordinator_id))
+            conn.commit()
+            conn.close()
+
             messagebox.showinfo("Sucesso", "Configuração salva com sucesso!")
             window.destroy()
 
-        save_btn = tk.Button(window, text="Salvar", command=save_config, bg="#B4E197")
-        save_btn.pack(pady=20)
+        tk.Button(window, text="Salvar", command=save_lab_config).pack(pady=20)
+
+        def open_lab_config_window(self):
+            window = tk.Toplevel(self.root)
+            window.title("Configurar Laboratórios")
+            window.geometry("400x300")
+            
+            tk.Label(window, text="Turma:").pack(pady=5)
+            class_var = tk.StringVar()
+            class_options = self.get_filtered_classes()
+            class_dropdown = ttk.Combobox(window, textvariable=class_var, values=class_options, state="readonly")
+            class_dropdown.pack()
+
+            tk.Label(window, text="Disciplina com Laboratório:").pack(pady=5)
+            discipline_var = tk.StringVar()
+            discipline_dropdown = ttk.Combobox(window, textvariable=discipline_var, state="readonly")
+            discipline_dropdown.pack()
+
+            def update_discipline_options(event):
+                selected_class = class_var.get()
+                disciplines = self.get_lab_disciplines_for_class(selected_class)
+                discipline_dropdown['values'] = disciplines
+                discipline_var.set("")
+
+            class_dropdown.bind("<<ComboboxSelected>>", update_discipline_options)
+
+            tk.Label(window, text="Quantidade de Divisões:").pack(pady=5)
+            division_entry = tk.Entry(window)
+            division_entry.pack()
+
+            def save_config():
+                class_name = class_var.get()
+                discipline_name = discipline_var.get()
+                division_count = division_entry.get()
+
+                if not class_name or not discipline_name or not division_count.isdigit():
+                    messagebox.showwarning("Atenção", "Preencha todos os campos corretamente.")
+                    return
+
+                self.save_lab_division_config(class_name, discipline_name, int(division_count))
+                messagebox.showinfo("Sucesso", "Configuração salva com sucesso!")
+                window.destroy()
+
+            save_btn = tk.Button(window, text="Salvar", command=save_config, bg="#B4E197")
+            save_btn.pack(pady=20)
+
 
     def generate_timetable(self):
         conn = sqlite3.connect(self.DB_NAME)
@@ -346,7 +435,6 @@ class TimetableApp:
             cls: {day: [['', ''] for _ in time_slots] for day in days_of_week}
             for cls in classes
         }
-
         timetable_entries = {cls: [] for cls in classes}
         availability_per_teacher = get_teacher_availability_for_timetable(teacher_limits, teachers)
         used_labs = {}
@@ -358,13 +446,25 @@ class TimetableApp:
             discipline_hours = {d['name']: d['hours'] for d in class_disciplines}
             assigned_hours = {d['id']: 0 for d in class_disciplines}
             discipline_map = {d['id']: d for d in class_disciplines}
-            
+
+            class_id = get_class_id(cls, self.coordinator_id)
+
+            # Buscar divisões de laboratório para a turma
             cursor.execute("""
-                SELECT discipline_id, division_count 
+                SELECT discipline_id, division_number, lab_name, coordinator_id
                 FROM lab_division_config 
                 WHERE class_id = ? AND coordinator_id = ?
-            """, (get_class_id(cls, self.coordinator_id), self.coordinator_id))
-            lab_division_map = {row[0]: row[1] for row in cursor.fetchall()}
+            """, (class_id, self.coordinator_id))
+
+            lab_divisions = cursor.fetchall()
+
+            lab_division_map = {}  # discipline_id -> lista de divisões
+            for discipline_id, division_number, lab_name, coordinator_id in lab_divisions:
+                lab_division_map.setdefault(discipline_id, []).append({
+                    "division_number": division_number,
+                    "lab_name": lab_name,
+                    "coordinator_id": coordinator_id
+                })
 
             for day in days_of_week:
                 for i, time_slot in enumerate(time_slots):
@@ -374,7 +474,7 @@ class TimetableApp:
                     inicio, termino = time_slot.split(" - ")
                     available_teachers_for_day = [
                         t for t in teachers if day in availability_per_teacher.get(t, [])
-                        ]
+                    ]
 
                     possible_disciplines = [
                         d for d in class_disciplines if assigned_hours[d['id']] < discipline_hours[d['name']]
@@ -388,35 +488,21 @@ class TimetableApp:
                     discipline_id = discipline_obj['id']
                     requires_lab = discipline_obj.get('requires_laboratory', False)
 
+                    # Se for prática
                     if requires_lab:
-                        division_count = lab_division_map.get(discipline_id, 1)  # padrão: 1 (turma inteira)
-                        horas_disciplina = discipline_hours.get(discipline_name, 0)
-
-                        if division_count <= 0:
-                            print(f"⚠️ Divisão inválida (<= 0) para a disciplina '{discipline_name}' (ID {discipline_id}) na turma '{cls}'. Usando divisão padrão = 1.")
-                            division_count = 1
-
-                        if horas_disciplina <= 0:
-                            print(f"❌ Horas inválidas para a disciplina '{discipline_name}' na turma '{cls}'.")
+                        divisons = lab_division_map.get(discipline_id, [])
+                        if not divisons:
+                            print(f"⚠️ Nenhuma divisão cadastrada para disciplina prática '{discipline_name}'.")
                             continue
 
-                        horas_por_divisao = int(horas_disciplina / division_count)
-                        
-                        # Só avisa se for uma divisão real (maior que 1) e ainda assim gerar 0 horas
-                        if division_count > 1 and horas_por_divisao == 0:
-                            print(f"❌ Erro de configuração: disciplina '{discipline_name}' tem divisão = {division_count}, "
-                                f"mas horas totais = {horas_disciplina}, resultando em 0 horas por divisão.")
-                            continue
+                        # Escolhe uma divisão que ainda tenha carga para preencher
+                        division = random.choice(divisons)
+                        lab_name = division["lab_name"]
+                        division_number = division["division_number"]
+                        coordinator_id = division.get("coordinator_id")
 
-                        current_division = int(assigned_hours.get(discipline_id, 0) / horas_por_divisao) + 1
-                        if current_division > division_count:
-                            continue  
-                        if assigned_hours.get(discipline_id, 0) >= horas_por_divisao * division_count:
-                            continue
-
-                        disciplina_label = f"{discipline_name}"
-                        lab_name = get_available_lab(cursor, day, used_labs, self.coordinator_id)
                         turma_lab = lab_name if lab_name else ""
+                        disciplina_label = f"{discipline_name} - D{division_number}"
 
                         possible_teachers = [t for t in available_teachers_for_day if day not in self.teacher_allocations.get(t, set())]
                         teacher = random.choice(possible_teachers) if possible_teachers else ""
@@ -425,41 +511,42 @@ class TimetableApp:
                             "DIA": day,
                             "INÍCIO": inicio,
                             "TÉRMINO": termino,
-                            "CÓDIGO": f"CMP{i+1:03}-L{current_division}",
+                            "CÓDIGO": f"CMP{i+1:03}-D{division_number}",
                             "NOME": discipline_name,
                             "TURMA LAB": turma_lab,
-                            "PROFESSOR": teacher,
+                            "PROFESSOR": teacher or "A definir",
                             "TEÓRICA": "",
                             "PRÁTICA": "X",
                             "ENCONTRO": ""
                         }
 
+                    # Se for disciplina normal (sem laboratório)
                     else:
                         disciplina_label = discipline_name
                         turma_lab = cls
                         teacher = random.choice(available_teachers_for_day) if available_teachers_for_day else ""
 
-                    assigned_hours[discipline_id] += 1
-                    self.teacher_allocations.setdefault(teacher, set()).add(day)
-                    timetable[cls][day][i] = [disciplina_label, teacher]
-                    turma_lab = "" if not requires_lab else cls
-                    entry = {
+                        entry = {
                             "DIA": day,
                             "INÍCIO": inicio,
                             "TÉRMINO": termino,
                             "CÓDIGO": f"CMP{i+1:03}",
-                            "NOME": disciplina_label,
-                            "TURMA LAB": turma_lab,
-                            "PROFESSOR": teacher,
-                            "TEÓRICA": "X" if not requires_lab else "",
-                            "PRÁTICA": "X" if requires_lab else "",
+                            "NOME": discipline_name,
+                            "TURMA LAB": "",
+                            "PROFESSOR": teacher or "A definir",
+                            "TEÓRICA": "X",
+                            "PRÁTICA": "",
                             "ENCONTRO": ""
                         }
 
+                    assigned_hours[discipline_id] += 1
+                    self.teacher_allocations.setdefault(teacher, set()).add(day)
+                    timetable[cls][day][i] = [disciplina_label, teacher]
                     timetable_entries[cls].append(entry)
 
         conn.close()
         return timetable_entries
+
 
     def show_timetable(self):
         for widget in self.scroll_frame.winfo_children():
