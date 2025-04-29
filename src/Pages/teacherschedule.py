@@ -35,7 +35,7 @@ class TimetableApp:
         self.coordinator_id = coordinator_id
         self.teachers = self.get_teachers(self.coordinator_id)
         self.root.title("Gerenciamento de Grade de Aulas")
-        self.root.geometry("900x800")
+        self.root.geometry("1100x900")
         self.root.config(bg=BACKGROUND_COLOR)
         self.selected_cell = None
         self.selected_grades = []

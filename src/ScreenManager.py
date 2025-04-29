@@ -17,7 +17,7 @@ class ScreenManager:
         self.icons_path = "C:/Users/sanvi/OneDrive/Documentos/GitHub/teacher-schedule/icons"
 
         self.root.title("GradeMaster")
-        self.root.state('zoomed')  # Janela maximizada
+        self.root.geometry("1100x900")
         self.root.configure(bg="#F4F6FA")
 
         self.create_top_menu()
@@ -66,7 +66,7 @@ class ScreenManager:
             logo_label = tk.Label(logo_frame, text="GM", font=("Helvetica", 20, "bold"), bg="#FFFFFF", fg="#2A72C3")
             logo_label.pack(side=tk.LEFT, padx=20)
 
-        title_label = tk.Label(logo_frame, text="GradeMaster", font=("Helvetica", 16, "bold"), bg="#FFFFFF", fg="#2A72C3")
+        title_label = tk.Label(logo_frame, text="Teacher Schedule", font=("Helvetica", 16, "bold"), bg="#FFFFFF", fg="#2A72C3")
         title_label.pack(side=tk.LEFT)
 
         # Menu items
@@ -74,6 +74,7 @@ class ScreenManager:
             ("Criar Grade", self.open_timetable),
             ("Grades Salvas", self.open_saved),
             ("Professores", self.open_teachers),
+            ("Disciplinas", self.open_subjects),
             ("Perfil", self.open_user_profile)
         ]
 

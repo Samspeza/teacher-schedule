@@ -11,7 +11,7 @@ class SavedGradesApp:
         self.root = root
         self.coordinator_id = coordinator_id
         self.root.title("Grades Salvas")
-        self.root.geometry("1200x700")
+        self.root.geometry("1100x900")
         self.root.configure(bg="#F0F2F5")
 
         # Sidebar
