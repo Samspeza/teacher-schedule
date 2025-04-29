@@ -418,6 +418,9 @@ class TimetableApp:
             save_btn.pack(pady=20)
 
 
+    #em configuração de laboratorio, preciso que seja possivel dar a entrada de quantas turmas serão disponibilizadas e o codigo precisa respeitar a quantidade certa para a geração das grades. Além disso, o nome do laboratorio nao é o nome da turma e sim o nome do lab cadastrado que vai ser responsavel por alocar a turma e o professor. Se tem duas tumas de laboratorio, a grade precisa mostrar essas duas turmas no dia certo com cada professor para cada lab e as demais aulas, se eu tenho 2 turmas por ex a garde continua mostrando apenas uma. Tudo isso precisa respeitar os dias e horarios das aulas
+
+
     def generate_timetable(self):
         conn = sqlite3.connect(self.DB_NAME)
         cursor = conn.cursor()
