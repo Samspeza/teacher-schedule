@@ -14,7 +14,7 @@ class ManageProfessorsApp:
         self.root = root
         self.coordinator_id = coordinator_id
         self.root.title("Gerenciamento de Professores")
-        self.root.geometry("1100x900")
+        self.root.geometry("1175x900")
         self.root.configure(bg="#F0F2F5")
 
         self.sidebar = self.create_sidebar()
