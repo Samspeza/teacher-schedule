@@ -72,20 +72,19 @@ disciplines = [
     ("CC2", "LPOO", "Ling. Programação OO", 4.5, "1T/2P", 3, 1,NULL,  1),
     ("CC2", "BD", "Banco de Dados", 4.5, "2T/1P", 3, 1, NULL, 1),
     ("CC2", "AG", "Álgebra Linear", 1.5, "1T/2P", 3, 0,NULL,  1),
-    ("CC2", "BD", "Banco de Dados", 4.5, "2T/1P", 3, 0,NULL,  1),
     
     ("CC3", "LPOO", "Ling. Programação OO", 4.5, "1T/2P", 3, 1,NULL,  1),
     ("CC3", "BD", "Banco de Dados", 4.5, "2T/1P", 3, 1,NULL,  1),
     ("CC3", "AG", "Álgebra Linear", 1.5, "1T/2P", 3, 0,NULL,  1),
     
     ("CC6", "AA", "Análise de Algoritmo", 1.5, "1T/2P", 3, 0, NULL, 1),
-    ("CC6", "FRV", "Fund. Realidade Virtual / Aum", 3, "1T/2P", 3, 0,NULL,  1),
+    ("CC6", "FRV", "Fund. Realidade Virtual / Aum", 1.5, "1T/2P", 3, 0,NULL,  1),
     ("CC6", "SD", "Sistemas Distribuídos", 3, "1T/2P", 3, 0,NULL,  1),
     ("CC6", "TCI", "TCI", 1.5, "1T/2P", 3, 0,NULL,  1),
     ("CC6", "ES", "Engenharia de Software", 3, "1T/2P", 3, 0, NULL, 1),
     
     ("CC7", "AA", "Análise de Algoritmo", 1.5, "1T/2P", 3, 0,NULL,  1),
-    ("CC7", "FRV", "Fund. Realidade Virtual / Aum", 3, "1T/2P", 3, 0, NULL, 1),
+    ("CC7", "FRV", "Fund. Realidade Virtual / Aum", 1.5, "1T/2P", 3, 0, NULL, 1),
     ("CC7", "SD", "Sistemas Distribuídos", 3, "1T/2P", 3, 0, NULL, 1),
     ("CC7", "TCI", "TCI", 1.5, "1T/2P", 3, 0, NULL, 1),
     ("CC7", "ES", "Engenharia de Software", 3, "1T/2P", 3, 0, NULL, 1),
@@ -96,10 +95,10 @@ disciplines = [
     ("CC8", "OS", "Orientação Estágio", 1, "1T/2P", 3, 0, NULL, 1),
 
     ("CC1", "FC", "Física para Computação", 1.5, "1T/2P", 3, 0,NULL,  1),
-    ("CC1", "PWR", "Programação Web Responsiva", 1.5, "1T/2P", 3, 1,NULL,  1),
+    ("CC1", "PWR", "Programação Web Responsiva", 3, "1T/2P", 3, 1,NULL,  1),
     ("CC1", "ER", "Engenharia de Requisistos", 1.5, "1T/2P", 3, 0, NULL, 1),
     ("CC1", "IHC", "Interface Humano Computador", 1.5, "1T/2P", 3, 0,NULL,  1),
-    ("CC1", "DDM", "Des. Dispositivos Móveis", 1.5, "1T/2P", 3, 1, NULL, 1),
+    ("CC1", "DDM", "Des. Dispositivos Móveis", 3, "1T/2P", 3, 1, NULL, 1),
     ("CC1", "TMA", "Tópicos de Matemática Aplicada", 1.5, "1T/2P", 3, 0, NULL, 1),
 
     ("ADS3P", "POO", "Programa O.O.", 3, "T/P", 3, 1,NULL,  2),

@@ -494,10 +494,8 @@ class TimetableApp:
         division_entry = ttk.Entry(config_frame, textvariable=self.division_var)
         division_entry.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
 
-        # Atualizar disciplinas com base na turma selecionada
         class_dropdown.bind("<<ComboboxSelected>>", self.update_lab_disciplines)
 
-        # Botão de salvar configuração
         save_btn = ttk.Button(config_frame, text="Salvar Configuração", command=self.save_lab_config)
         save_btn.grid(row=3, column=0, columnspan=2, pady=10)
         
@@ -517,7 +515,6 @@ class TimetableApp:
             print("❌ Não há laboratórios suficientes para alocar as divisões.")
             return
 
-        # Passo 2: Alocar os laboratórios automaticamente
         for lab in available_labs:
             selected_lab_name = lab['name']
             self.save_lab_division_config(class_name, discipline_name, division_count, selected_lab_name)
@@ -584,7 +581,6 @@ class TimetableApp:
             conn.close()
             return
 
-        # Obter laboratórios disponíveis
         cursor.execute("""
             SELECT id, name, capacity FROM laboratories 
             WHERE coordinator_id = ?
@@ -596,7 +592,6 @@ class TimetableApp:
             conn.close()
             return
 
-        # Verificar divisões já existentes no banco
         cursor.execute("""
             SELECT division_number, lab_id FROM lab_division_config 
             WHERE class_id = ? AND discipline_id = ?
@@ -605,7 +600,6 @@ class TimetableApp:
         used_lab_ids = {lab_id for _, lab_id in existing_divisions}
         existing_div_numbers = {div_num for div_num, _ in existing_divisions}
 
-        # Definir quais divisões faltam
         total_needed = division_count
         available_divisions = [i for i in range(1, division_count + 1) if i not in existing_div_numbers]
       
