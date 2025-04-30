@@ -4,7 +4,7 @@ import sqlite3
 
 from database import DB_NAME, create_tables
 from models import (
-    clear_class_divisions, insert_discipline, insert_lab, insert_teacher, insert_availability, insert_class, insert_teacher_limit, insert_time_slot, get_teachers, 
+    clear_class_divisions, clear_lab_division_config, insert_discipline, insert_lab, insert_teacher, insert_availability, insert_class, insert_teacher_limit, insert_time_slot, get_teachers, 
     clear_teachers, clear_classes, clear_time_slots, clear_availability, reset_ids
 )
 
@@ -190,16 +190,16 @@ teacher_limits = {
 }
 
 labs = [
-    ("Lab 1", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 1),
-    ("Lab 2","Segunda, Terça, Quarta, Quinta, Sexta", 5, 1),
-    ("Lab 3", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 1),
-    ("Lab 4", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 1),
-    ("Lab 5", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 1),
-    ("Lab 6", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 1),
-    ("Lab 7", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 1),
-    ("Lab 8", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 1),
-    ("Lab 9", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 1),
-    ("Lab 10", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 1),
+    ("Lab 1", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 50 ,1),
+    ("Lab 2","Segunda, Terça, Quarta, Quinta, Sexta", 5, 75 ,1),
+    ("Lab 3", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 50 ,1),
+    ("Lab 4", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 75 ,1),
+    ("Lab 5", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 50 ,1),
+    ("Lab 6", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 50 ,1),
+    ("Lab 7", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 75 ,1),
+    ("Lab 8", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 75 ,1),
+    ("Lab 9", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 50 ,1),
+    ("Lab 10", "Segunda, Terça, Quarta, Quinta, Sexta", 5, 75 ,1),
 ]
 
 def initialize_db():
@@ -214,6 +214,7 @@ def initialize_db():
     clear_time_slots()
     clear_availability()
     clear_class_divisions()
+    clear_lab_division_config()
     reset_ids()
     
     for lab in labs:

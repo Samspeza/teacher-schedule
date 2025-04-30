@@ -297,54 +297,126 @@ class TimetableApp:
         conn.close()
 
         return result[0] if result else None
+    
+    def get_all_labs_for_coordinator(self):
+        conn = sqlite3.connect(self.DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT name FROM laboratories
+            WHERE coordinator_id = ?
+            ORDER BY name
+        """, (self.coordinator_id,))
+        labs = [row[0] for row in cursor.fetchall()]
+        conn.close()
+        return labs
+    
+    def get_available_labs_for_class(self, class_name, division_count):
+        conn = sqlite3.connect(self.DB_NAME)
+        cursor = conn.cursor()
 
-    def save_lab_division_config(self, class_name, discipline_name, division_count):
+        cursor.execute("""
+            SELECT student_count FROM classes
+            WHERE name = ? AND coordinator_id = ?
+        """, (class_name, self.coordinator_id))
+        student_count = cursor.fetchone()
+
+        if not student_count:
+            print(f"❌ Classe '{class_name}' não encontrada.")
+            conn.close()
+            return []
+
+        student_count = student_count[0]
+
+        cursor.execute("""
+            SELECT id, name, capacity FROM laboratories
+            WHERE coordinator_id = ?
+        """, (self.coordinator_id,))
+        labs = cursor.fetchall()
+        conn.close()
+
+        available_labs = []
+        for lab in labs:
+            lab_id, lab_name, lab_capacity = lab
+            lab_divisions_needed = (student_count // lab_capacity) + (student_count % lab_capacity > 0)
+
+            if lab_capacity >= lab_divisions_needed:
+                available_labs.append({'id': lab_id, 'name': lab_name, 'capacity': lab_capacity})
+
+        return available_labs
+
+    def get_lab_capacity(self, lab_id):
+        conn = sqlite3.connect(self.DB_NAME)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT capacity FROM laboratories WHERE id = ? AND coordinator_id = ?
+        """, (lab_id, self.coordinator_id))  
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result:
+            return result[0]
+        return 0  
+
+    def save_lab_division_config(self, class_name, discipline_name, division_count, selected_lab_name=None):
         conn = sqlite3.connect(self.DB_NAME)
         cursor = conn.cursor()
 
         class_id = get_class_id(class_name, self.coordinator_id)
         discipline_id = self.get_discipline_id_by_name(discipline_name)
 
-        lab_name = self.get_lab_name_for_discipline(discipline_name)
+        if class_id is None or discipline_id is None:
+            messagebox.showerror("Erro", "Turma ou disciplina não encontrada.")
+            conn.close()
+            return
 
-        # Se a disciplina não tiver laboratório associado, cria um novo laboratório
-        if not lab_name:
-            # Nome genérico baseado no nome da disciplina
-            generated_lab_name = f"Lab - {discipline_name}"
-            
-            # Insere novo laboratório
-            cursor.execute("""
-                INSERT INTO laboratories (name, available_days, daily_limit, coordinator_id)
-                VALUES (?, ?, ?, ?)
-            """, (generated_lab_name, "Segunda,Terça,Quarta,Quinta,Sexta", 4, self.coordinator_id))
-            
-            lab_id = cursor.lastrowid
-
-            # Atualiza a disciplina para associar com o novo laboratório
-            cursor.execute("""
-                UPDATE disciplines
-                SET laboratory_id = ?
-                WHERE id = ?
-            """, (lab_id, discipline_id))
-
-            lab_name = generated_lab_name
-
-        # Remove divisões anteriores (caso o usuário queira sobrescrever)
         cursor.execute("""
-            DELETE FROM lab_division_config
-            WHERE class_id = ? AND discipline_id = ? AND coordinator_id = ?
-        """, (class_id, discipline_id, self.coordinator_id))
+            SELECT id, name, capacity FROM laboratories 
+            WHERE coordinator_id = ?
+            ORDER BY capacity ASC
+        """, (self.coordinator_id,))
+        labs = cursor.fetchall()
 
-        # Insere as novas divisões
-        for i in range(1, division_count + 1):
+        cursor.execute("""
+            SELECT division_number, lab_id FROM lab_division_config 
+            WHERE class_id = ? AND discipline_id = ?
+        """, (class_id, discipline_id))
+        existing_divisions = cursor.fetchall()
+        used_lab_ids = {lab_id for _, lab_id in existing_divisions}
+        existing_div_numbers = {div_num for div_num, _ in existing_divisions}
+
+        available_divisions = [i for i in range(1, division_count + 1) if i not in existing_div_numbers]
+        if not available_divisions:
+            messagebox.showinfo("Info", "Todas as divisões já foram alocadas anteriormente.")
+            conn.close()
+            return
+
+        available_labs = [lab for lab in labs if lab[0] not in used_lab_ids]
+        if not available_labs or len(available_labs) < len(available_divisions):
+            messagebox.showerror("Erro", "Não há laboratórios suficientes disponíveis.")
+            conn.close()
+            return
+
+        allocated_labs = []
+        for i, div_number in enumerate(available_divisions):
+            lab = available_labs[i % len(available_labs)]
+            lab_id, lab_name, _ = lab
             cursor.execute("""
-                INSERT INTO lab_division_config (class_id, discipline_id, division_number, lab_name, coordinator_id)
+                INSERT INTO lab_division_config (class_id, discipline_id, division_number, lab_id, coordinator_id)
                 VALUES (?, ?, ?, ?, ?)
-            """, (class_id, discipline_id, i, lab_name, self.coordinator_id))
+            """, (class_id, discipline_id, div_number, lab_id, self.coordinator_id))
+            allocated_labs.append(lab_name)
+            used_lab_ids.add(lab_id)
 
         conn.commit()
         conn.close()
 
+        if allocated_labs:
+            unique_labs = sorted(set(allocated_labs))
+            messagebox.showinfo("Sucesso", f"Divisões alocadas com sucesso nos laboratórios: {', '.join(unique_labs)}.")
+
+        self.load_lab_config_data()
 
     def open_lab_config_window(self, event=None):
         window = tk.Toplevel()
@@ -421,13 +493,36 @@ class TimetableApp:
         self.division_var = tk.StringVar()
         division_entry = ttk.Entry(config_frame, textvariable=self.division_var)
         division_entry.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
-        
+
+        # Atualizar disciplinas com base na turma selecionada
         class_dropdown.bind("<<ComboboxSelected>>", self.update_lab_disciplines)
 
+        # Botão de salvar configuração
         save_btn = ttk.Button(config_frame, text="Salvar Configuração", command=self.save_lab_config)
         save_btn.grid(row=3, column=0, columnspan=2, pady=10)
         
         self.lab_tree.bind("<Double-1>", self.edit_lab_config)
+
+    def save_lab_config(self):
+        class_name = self.class_var.get()
+        discipline_name = self.discipline_var.get()
+        division_count = int(self.division_var.get())
+
+        if not class_name or not discipline_name or division_count <= 0:
+            print("❌ Preencha todos os campos corretamente.")
+            return
+
+        available_labs = self.get_available_labs_for_class(class_name, division_count)
+        if not available_labs:
+            print("❌ Não há laboratórios suficientes para alocar as divisões.")
+            return
+
+        # Passo 2: Alocar os laboratórios automaticamente
+        for lab in available_labs:
+            selected_lab_name = lab['name']
+            self.save_lab_division_config(class_name, discipline_name, division_count, selected_lab_name)
+
+        print(f"✔️ Divisões alocadas com sucesso nos laboratórios.")
 
     def load_lab_config_data(self):
         """Load all classes and disciplines that need lab allocation"""
@@ -455,8 +550,7 @@ class TimetableApp:
                                 tags=('configured' if configured == "✔" else 'not_configured'))
         
         self.lab_tree.tag_configure('configured', background='#e6ffe6')
-        self.lab_tree.tag_configure('not_configured', background='#ffe6e6')
-        
+        self.lab_tree.tag_configure('not_configured', background='#ffe6e6')       
         conn.close()
 
     def update_lab_disciplines(self, event=None):
@@ -477,33 +571,80 @@ class TimetableApp:
         self.discipline_var.set(values[2])
         self.division_var.set(values[3] if values[3] != '0' else "")
 
-    def save_lab_config(self):
-        selected_class_name = self.class_var.get()
-        selected_discipline_name = self.discipline_var.get()
-        division_count_str = self.division_var.get()
-        
-        if not selected_class_name or not selected_discipline_name or not division_count_str.isdigit():
-            messagebox.showerror("Erro", "Preencha todos os campos corretamente!")
+    def save_lab_division_config(self, class_name, discipline_name, division_count, selected_lab_name=None):
+        conn = sqlite3.connect(self.DB_NAME)
+        cursor = conn.cursor()
+
+        # Obter IDs
+        class_id = get_class_id(class_name, self.coordinator_id)
+        discipline_id = self.get_discipline_id_by_name(discipline_name)
+
+        if class_id is None or discipline_id is None:
+            messagebox.showerror("Erro", "Turma ou disciplina não encontrada.")
+            conn.close()
             return
-        
-        try:
-            division_count = int(division_count_str)
-            if division_count <= 0:
-                raise ValueError
-        except ValueError:
-            messagebox.showerror("Erro", "O número de divisões deve ser um inteiro positivo!")
+
+        # Obter laboratórios disponíveis
+        cursor.execute("""
+            SELECT id, name, capacity FROM laboratories 
+            WHERE coordinator_id = ?
+            ORDER BY capacity ASC
+        """, (self.coordinator_id,))
+        labs = cursor.fetchall()
+        if not labs:
+            messagebox.showerror("Erro", "Nenhum laboratório disponível.")
+            conn.close()
             return
-        
-        self.save_lab_division_config(selected_class_name, selected_discipline_name, division_count)
+
+        # Verificar divisões já existentes no banco
+        cursor.execute("""
+            SELECT division_number, lab_id FROM lab_division_config 
+            WHERE class_id = ? AND discipline_id = ?
+        """, (class_id, discipline_id))
+        existing_divisions = cursor.fetchall()
+        used_lab_ids = {lab_id for _, lab_id in existing_divisions}
+        existing_div_numbers = {div_num for div_num, _ in existing_divisions}
+
+        # Definir quais divisões faltam
+        total_needed = division_count
+        available_divisions = [i for i in range(1, division_count + 1) if i not in existing_div_numbers]
+      
+        lab_divisions = []
+        divisions_remaining = len(available_divisions)
+        cursor.execute("""
+            SELECT DISTINCT lab_id 
+            FROM lab_division_config 
+            WHERE class_id = ? AND coordinator_id = ? AND discipline_id != ?
+        """, (class_id, self.coordinator_id, discipline_id))
+        labs_used_by_class = {row[0] for row in cursor.fetchall()}
+
+        available_labs = [lab for lab in labs if lab[0] not in used_lab_ids and lab[0] not in labs_used_by_class]
+
+        if not available_labs or len(available_labs) < divisions_remaining:
+            messagebox.showerror("Erro", "Não há laboratórios suficientes disponíveis.")
+            conn.close()
+            return
+
+        allocated_labs = []
+        for i, div_number in enumerate(available_divisions):
+            lab = available_labs[i % len(available_labs)]
+            lab_id, lab_name, _ = lab
+            cursor.execute("""
+                INSERT INTO lab_division_config (class_id, discipline_id, division_number, lab_id, coordinator_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (class_id, discipline_id, div_number, lab_id, self.coordinator_id))
+            allocated_labs.append(lab_name)
+            used_lab_ids.add(lab_id)
+
+        conn.commit()
+        conn.close()
+
+        # Mensagem única
+        if allocated_labs:
+            unique_labs = sorted(set(allocated_labs))
+            messagebox.showinfo("Sucesso", f"Divisões alocadas com sucesso nos laboratórios: {', '.join(unique_labs)}.")
         self.load_lab_config_data()
-        self.division_var.set("")
-        
-        messagebox.showinfo("Sucesso", f"Configuração salva com sucesso!\n"
-                        f"Turma: {selected_class_name}\n"
-                        f"Disciplina: {selected_discipline_name}\n"
-                        f"Divisões: {division_count}")
-        
-        
+
     def generate_timetable(self):
         conn = sqlite3.connect(self.DB_NAME)
         cursor = conn.cursor()
@@ -524,6 +665,19 @@ class TimetableApp:
         }
         timetable_entries = {cls: [] for cls in classes}
         teacher_availability = get_teacher_availability_for_timetable(teacher_limits, teachers)
+
+        lab_schedule = {}
+        for cls in classes:
+            class_id = get_class_id(cls, self.coordinator_id)
+            cursor.execute("""
+                SELECT l.name FROM lab_division_config ldc
+                JOIN laboratories l ON l.id = ldc.lab_id
+                WHERE ldc.class_id = ? AND ldc.coordinator_id = ?
+            """, (class_id, self.coordinator_id))
+            for (lab_name,) in cursor.fetchall():
+                if lab_name not in lab_schedule:
+                    lab_schedule[lab_name] = {day: set() for day in days_of_week}
+
         
         # Dicionários para rastrear alocações
         teacher_load = {t: 0 for t in teachers}  
@@ -538,12 +692,13 @@ class TimetableApp:
 
             class_id = get_class_id(cls, self.coordinator_id)
 
-            # Buscar divisões de laboratório
             cursor.execute("""
-                SELECT discipline_id, division_number, lab_name 
-                FROM lab_division_config 
-                WHERE class_id = ? AND coordinator_id = ?
+                SELECT ldc.discipline_id, ldc.division_number, l.name 
+                FROM lab_division_config ldc
+                JOIN laboratories l ON ldc.lab_id = l.id
+                WHERE ldc.class_id = ? AND ldc.coordinator_id = ?
             """, (class_id, self.coordinator_id))
+
             lab_divisions = cursor.fetchall()
             lab_division_map = {}
             for discipline_id, division_number, lab_name in lab_divisions:
@@ -584,36 +739,60 @@ class TimetableApp:
                     available_teachers.sort(key=lambda t: teacher_load[t])
                     teacher = available_teachers[0] if available_teachers else None
 
-                    if requires_lab and discipline_id in lab_division_map:
-                        # Processar aula prática
-                        for division in lab_division_map[discipline_id]:
-                            if assigned_hours[discipline_id] >= discipline_hours[discipline_name]:
-                                break
+                    if time_slot in lab_schedule[lab_name][day]:
+                        continue  # horário já ocupado neste lab
 
+                    if requires_lab and discipline_id in lab_division_map:
+                        # Alocar todas as divisões obrigatórias de laboratório
+                        for division in lab_division_map[discipline_id]:
                             lab_name = division["lab_name"]
                             division_number = division["division_number"]
                             disciplina_label = f"{discipline_name} - D{division_number}"
 
-                            entry = {
-                                "DIA": day,
-                                "INÍCIO": inicio,
-                                "TÉRMINO": termino,
-                                "CÓDIGO": f"CMP{i+1:03}-D{division_number}",
-                                "NOME": discipline_name,
-                                "TURMA LAB": lab_name,
-                                "PROFESSOR": teacher or "A definir",
-                                "TEÓRICA": "",
-                                "PRÁTICA": "X",
-                                "ENCONTRO": ""
-                            }
+                            alocado = False
+                            for day in days_of_week:
+                                for i, time_slot in enumerate(time_slots):
+                                    if time_slot == "20:25 - 20:45":
+                                        continue  # intervalo
+                                    if timetable[cls][day][i][0]:  # já ocupado
+                                        continue
+                                    # Verificar professor disponível
+                                    available_teachers = [
+                                        t for t in teachers 
+                                        if day in teacher_availability.get(t, []) and
+                                        time_slot not in teacher_schedule[t][day]
+                                    ]
+                                    available_teachers.sort(key=lambda t: teacher_load[t])
+                                    teacher = available_teachers[0] if available_teachers else None
 
-                            assigned_hours[discipline_id] += 1
-                            if teacher:
-                                teacher_load[teacher] += 1
-                                teacher_schedule[teacher][day].append(time_slot)
-                            timetable[cls][day][i] = [disciplina_label, teacher or "A definir"]
-                            timetable_entries[cls].append(entry)
-                        continue
+                                    # Registrar aula de laboratório
+                                    entry = {
+                                        "DIA": day,
+                                        "INÍCIO": time_slot.split(" - ")[0],
+                                        "TÉRMINO": time_slot.split(" - ")[1],
+                                        "CÓDIGO": f"CMP{i+1:03}-D{division_number}",
+                                        "NOME": discipline_name,
+                                        "TURMA LAB": lab_name,
+                                        "PROFESSOR": teacher or "A definir",
+                                        "TEÓRICA": "",
+                                        "PRÁTICA": "X",
+                                        "ENCONTRO": ""
+                                    }
+
+                                    timetable[cls][day][i] = [disciplina_label, teacher or "A definir"]
+                                    timetable_entries[cls].append(entry)
+                                    assigned_hours[discipline_id] += 1
+                                    if teacher:
+                                        teacher_load[teacher] += 1
+                                        teacher_schedule[teacher][day].append(time_slot)
+                                    alocado = True
+                                    break
+                                if alocado:
+                                    lab_schedule[lab_name][day].add(time_slot)
+                                    break
+
+                            if not alocado:
+                                print(f"⚠️ Aula de laboratório '{disciplina_label}' não foi alocada!")
 
                     # Processar aula teórica
                     disciplina_label = discipline_name

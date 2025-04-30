@@ -113,6 +113,7 @@ def create_tables():
         name TEXT NOT NULL,
         available_days TEXT NOT NULL,
         daily_limit INTEGER NOT NULL,
+        capacity INTEGER NOT NULL,
         coordinator_id INTEGER,
         FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
@@ -161,12 +162,14 @@ def create_tables():
         class_id INTEGER NOT NULL,
         discipline_id INTEGER NOT NULL,
         division_number INTEGER NOT NULL,
-        lab_name TEXT NOT NULL,            
+        lab_id INTEGER NOT NULL,
         coordinator_id INTEGER,
         FOREIGN KEY (class_id) REFERENCES classes(id),
         FOREIGN KEY (discipline_id) REFERENCES disciplines(id),
+        FOREIGN KEY (lab_id) REFERENCES laboratories(id),
         FOREIGN KEY (coordinator_id) REFERENCES coordinators(id)
     );
+
     """)
 
     cursor.execute("""

@@ -28,6 +28,9 @@ def clear_class_divisions():
 def clear_discipline_class():
     execute_query("DELETE FROM discipline_class")
 
+def clear_lab_division_config():
+    execute_query("DELETE FROM lab_division_config")
+
 def reset_ids():
     """Reseta os IDs das tabelas para começar do 1 novamente"""
     execute_query("DELETE FROM sqlite_sequence WHERE name='teachers'")
@@ -36,16 +39,17 @@ def reset_ids():
     execute_query("DELETE FROM sqlite_sequence WHERE name='teacher_availability'")
     execute_query("DELETE FROM sqlite_sequence WHERE name= 'class_divisions'")
     execute_query("DELETE FROM sqlite_sequence WHERE name= 'discipline_class'")
+    execute_query("DELETE FROM sqlite_sequence WHERE name= 'lab_division_config'")
 
-def insert_lab(lab_name, available_days, daily_limit, coordinator_id):
+def insert_lab(lab_name, available_days, daily_limit, capacity, coordinator_id):
     try:
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         
         cursor.execute("""
-            INSERT INTO laboratories (name, available_days, daily_limit, coordinator_id)
-            VALUES (?, ?, ?, ?)
-        """, (lab_name, available_days, daily_limit, coordinator_id))
+            INSERT INTO laboratories (name, available_days, daily_limit, capacity, coordinator_id)
+            VALUES (?, ?, ?, ?, ?)
+        """, (lab_name, available_days, daily_limit, capacity, coordinator_id))
         
         conn.commit()
         print(f"Laboratório '{lab_name}' inserido com sucesso!")
