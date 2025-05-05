@@ -673,13 +673,29 @@ class TimetableApp:
 
         teacher_load = {t: 0 for t in teachers}
         teacher_schedule = {t: {day: [] for day in days_of_week} for t in teachers}
+        turma_schedule = {cls: {day: [False] * len(time_slots) for day in days_of_week} for cls in classes}
+
+        # Define blocos com duração em horas reais
+        bloco_map = {
+            "19:10 - 20:25": 1.25,
+            "20:45 - 22:00": 1.25
+        }
+
+        blocos_por_duracao = {
+            1.5: [["19:10 - 20:25"]],  # Apenas um bloco
+            2: [["19:10 - 20:25"], ["20:45 - 22:00"]],
+            2.5: [["19:10 - 20:25"], ["20:45 - 22:00"]],
+            3: [["19:10 - 20:25"], ["20:45 - 22:00"]],
+            4.5: [["19:10 - 20:25", "20:45 - 22:00"], ["19:10 - 20:25"]],
+            6: [["19:10 - 20:25", "20:45 - 22:00"], ["19:10 - 20:25", "20:45 - 22:00"]],
+        }
 
         for cls in classes:
             class_course = get_class_course(cls, self.coordinator_id)
             class_disciplines = [d for d in disciplines if d['course'] == class_course]
 
             discipline_hours = {d['name']: d['hours'] for d in class_disciplines}
-            assigned_hours = {d['id']: 0 for d in class_disciplines}
+            assigned_hours = {d['id']: 0.0 for d in class_disciplines}
 
             class_id = get_class_id(cls, self.coordinator_id)
 
@@ -704,6 +720,8 @@ class TimetableApp:
                 total_hours = discipline_obj['hours']
                 requires_lab = discipline_obj.get('requires_laboratory', False)
 
+                blocos = blocos_por_duracao.get(total_hours, [["19:10 - 20:25"]])
+
                 def get_available_teacher(day, slots):
                     for t in sorted(teachers, key=lambda x: teacher_load[x]):
                         if day in teacher_availability.get(t, []) and all(s not in teacher_schedule[t][day] for s in slots):
@@ -713,12 +731,13 @@ class TimetableApp:
                 def mark_teacher(t, day, slots):
                     for s in slots:
                         teacher_schedule[t][day].append(s)
-                    teacher_load[t] += len(slots)
+                    teacher_load[t] += sum(bloco_map.get(s, 1) for s in slots)
 
                 def allocate_block(cls, day, slots, label, teacher, is_lab=False, lab_name=""):
                     for s in slots:
                         idx = time_slots.index(s)
                         timetable[cls][day][idx] = [label, teacher or "A definir"]
+                        turma_schedule[cls][day][idx] = True
                     entry = {
                         "DIA": day,
                         "INÍCIO": slots[0].split(" - ")[0],
@@ -732,36 +751,26 @@ class TimetableApp:
                         "ENCONTRO": ""
                     }
                     timetable_entries[cls].append(entry)
-                    assigned_hours[discipline_id] += len(slots)
+                    assigned_hours[discipline_id] += sum(bloco_map.get(s, 1) for s in slots)
                     if teacher:
                         mark_teacher(teacher, day, slots)
-
-                blocos = {
-                    3: [["19:10 - 20:25", "20:45 - 22:00"]],
-                    2: [["19:10 - 20:25"], ["20:45 - 22:00"]],
-                    1: [["19:10 - 20:25"], ["20:45 - 22:00"]]
-                }
 
                 for day in days_of_week:
                     if assigned_hours[discipline_id] >= total_hours:
                         break
 
-                    for bloco in blocos.get(total_hours, [["19:10 - 20:25"]]):
+                    blocos_ocupados = sum(1 for i in range(len(time_slots)) if turma_schedule[cls][day][i])
+                    if blocos_ocupados >= 4:
+                        continue
+
+                    for bloco in blocos:
                         if assigned_hours[discipline_id] >= total_hours:
                             break
 
-                        # Checa conflitos teóricos para a mesma turma
-                        conflito_teorico = False
-                        if not requires_lab:
-                            for s in bloco:
-                                idx = time_slots.index(s)
-                                if timetable[cls][day][idx][0] != '':
-                                    conflito_teorico = True
-                                    break
-                            if conflito_teorico:
-                                continue
+                        indices = [time_slots.index(s) for s in bloco]
+                        if any(turma_schedule[cls][day][i] for i in indices):
+                            continue
 
-                        # Evita conflito com laboratório
                         if requires_lab and discipline_id in lab_division_map:
                             for division in lab_division_map[discipline_id]:
                                 lab_name = division["lab_name"]
@@ -772,10 +781,12 @@ class TimetableApp:
                                     allocate_block(cls, day, bloco, f"{discipline_name} - D{division['division_number']}", teacher, is_lab=True, lab_name=lab_name)
                                     for s in bloco:
                                         lab_schedule[lab_name][day].add(s)
+                                    break
                         else:
                             teacher = get_available_teacher(day, bloco)
                             if teacher or not requires_lab:
                                 allocate_block(cls, day, bloco, discipline_name, teacher)
+                                break
 
         conn.close()
 
