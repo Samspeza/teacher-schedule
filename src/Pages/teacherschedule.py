@@ -652,7 +652,6 @@ class TimetableApp:
             print("⚠️ Nenhuma turma encontrada para este coordenador.")
             return {}
 
-        # Estruturas para controle
         timetable = {
             cls: {day: [['', ''] for _ in time_slots] for day in days_of_week}
             for cls in classes
@@ -672,10 +671,8 @@ class TimetableApp:
                 if lab_name not in lab_schedule:
                     lab_schedule[lab_name] = {day: set() for day in days_of_week}
 
-        
-        # Dicionários para rastrear alocações
-        teacher_load = {t: 0 for t in teachers}  
-        teacher_schedule = {t: {day: [] for day in days_of_week} for t in teachers} 
+        teacher_load = {t: 0 for t in teachers}
+        teacher_schedule = {t: {day: [] for day in days_of_week} for t in teachers}
 
         for cls in classes:
             class_course = get_class_course(cls, self.coordinator_id)
@@ -701,129 +698,99 @@ class TimetableApp:
                     "lab_name": lab_name
                 })
 
-            for day in days_of_week:
-                for i, time_slot in enumerate(time_slots):
-                    if time_slot == "20:25 - 20:45":
-                        continue  # intervalo
+            for discipline_obj in class_disciplines:
+                discipline_name = discipline_obj['name']
+                discipline_id = discipline_obj['id']
+                total_hours = discipline_obj['hours']
+                requires_lab = discipline_obj.get('requires_laboratory', False)
 
-                    inicio, termino = time_slot.split(" - ")
-                    
-                    # Disciplinas que ainda precisam de horas
-                    possible_disciplines = [
-                        d for d in class_disciplines 
-                        if assigned_hours[d['id']] < discipline_hours[d['name']]
-                    ]
-                    
-                    if not possible_disciplines:
-                        continue
+                def get_available_teacher(day, slots):
+                    for t in sorted(teachers, key=lambda x: teacher_load[x]):
+                        if day in teacher_availability.get(t, []) and all(s not in teacher_schedule[t][day] for s in slots):
+                            return t
+                    return None
 
-                    discipline_obj = random.choice(possible_disciplines)
-                    discipline_name = discipline_obj['name']
-                    discipline_id = discipline_obj['id']
-                    requires_lab = discipline_obj.get('requires_laboratory', False)
+                def mark_teacher(t, day, slots):
+                    for s in slots:
+                        teacher_schedule[t][day].append(s)
+                    teacher_load[t] += len(slots)
 
-                    # Encontrar professor disponível
-                    available_teachers = [
-                        t for t in teachers 
-                        if day in teacher_availability.get(t, []) and
-                        time_slot not in teacher_schedule[t][day]
-                    ]
-
-                    # Ordenar por professores com menos aulas alocadas
-                    available_teachers.sort(key=lambda t: teacher_load[t])
-                    teacher = available_teachers[0] if available_teachers else None
-
-                    if time_slot in lab_schedule[lab_name][day]:
-                        continue  # horário já ocupado neste lab
-
-                    if requires_lab and discipline_id in lab_division_map:
-                        # Alocar todas as divisões obrigatórias de laboratório
-                        for division in lab_division_map[discipline_id]:
-                            lab_name = division["lab_name"]
-                            division_number = division["division_number"]
-                            disciplina_label = f"{discipline_name} - D{division_number}"
-
-                            alocado = False
-                            for day in days_of_week:
-                                for i, time_slot in enumerate(time_slots):
-                                    if time_slot == "20:25 - 20:45":
-                                        continue  # intervalo
-                                    if timetable[cls][day][i][0]:  # já ocupado
-                                        continue
-                                    # Verificar professor disponível
-                                    available_teachers = [
-                                        t for t in teachers 
-                                        if day in teacher_availability.get(t, []) and
-                                        time_slot not in teacher_schedule[t][day]
-                                    ]
-                                    available_teachers.sort(key=lambda t: teacher_load[t])
-                                    teacher = available_teachers[0] if available_teachers else None
-
-                                    # Registrar aula de laboratório
-                                    entry = {
-                                        "DIA": day,
-                                        "INÍCIO": time_slot.split(" - ")[0],
-                                        "TÉRMINO": time_slot.split(" - ")[1],
-                                        "CÓDIGO": f"CMP{i+1:03}-D{division_number}",
-                                        "NOME": discipline_name,
-                                        "TURMA LAB": lab_name,
-                                        "PROFESSOR": teacher or "A definir",
-                                        "TEÓRICA": "",
-                                        "PRÁTICA": "X",
-                                        "ENCONTRO": ""
-                                    }
-
-                                    timetable[cls][day][i] = [disciplina_label, teacher or "A definir"]
-                                    timetable_entries[cls].append(entry)
-                                    assigned_hours[discipline_id] += 1
-                                    if teacher:
-                                        teacher_load[teacher] += 1
-                                        teacher_schedule[teacher][day].append(time_slot)
-                                    alocado = True
-                                    break
-                                if alocado:
-                                    lab_schedule[lab_name][day].add(time_slot)
-                                    break
-
-                            if not alocado:
-                                print(f"⚠️ Aula de laboratório '{disciplina_label}' não foi alocada!")
-
-                    # Processar aula teórica
-                    disciplina_label = discipline_name
+                def allocate_block(cls, day, slots, label, teacher, is_lab=False, lab_name=""):
+                    for s in slots:
+                        idx = time_slots.index(s)
+                        timetable[cls][day][idx] = [label, teacher or "A definir"]
                     entry = {
                         "DIA": day,
-                        "INÍCIO": inicio,
-                        "TÉRMINO": termino,
-                        "CÓDIGO": f"CMP{i+1:03}",
+                        "INÍCIO": slots[0].split(" - ")[0],
+                        "TÉRMINO": slots[-1].split(" - ")[1],
+                        "CÓDIGO": f"CMP{len(timetable_entries[cls]) + 1:03}",
                         "NOME": discipline_name,
-                        "TURMA LAB": "",
+                        "TURMA LAB": lab_name if is_lab else "",
                         "PROFESSOR": teacher or "A definir",
-                        "TEÓRICA": "X",
-                        "PRÁTICA": "",
+                        "TEÓRICA": "" if is_lab else "X",
+                        "PRÁTICA": "X" if is_lab else "",
                         "ENCONTRO": ""
                     }
-
-                    assigned_hours[discipline_id] += 1
-                    if teacher:
-                        teacher_load[teacher] += 1
-                        teacher_schedule[teacher][day].append(time_slot)
-                    timetable[cls][day][i] = [disciplina_label, teacher or "A definir"]
                     timetable_entries[cls].append(entry)
+                    assigned_hours[discipline_id] += len(slots)
+                    if teacher:
+                        mark_teacher(teacher, day, slots)
+
+                blocos = {
+                    3: [["19:10 - 20:25", "20:45 - 22:00"]],
+                    2: [["19:10 - 20:25"], ["20:45 - 22:00"]],
+                    1: [["19:10 - 20:25"], ["20:45 - 22:00"]]
+                }
+
+                for day in days_of_week:
+                    if assigned_hours[discipline_id] >= total_hours:
+                        break
+
+                    for bloco in blocos.get(total_hours, [["19:10 - 20:25"]]):
+                        if assigned_hours[discipline_id] >= total_hours:
+                            break
+
+                        # Checa conflitos teóricos para a mesma turma
+                        conflito_teorico = False
+                        if not requires_lab:
+                            for s in bloco:
+                                idx = time_slots.index(s)
+                                if timetable[cls][day][idx][0] != '':
+                                    conflito_teorico = True
+                                    break
+                            if conflito_teorico:
+                                continue
+
+                        # Evita conflito com laboratório
+                        if requires_lab and discipline_id in lab_division_map:
+                            for division in lab_division_map[discipline_id]:
+                                lab_name = division["lab_name"]
+                                if any(s in lab_schedule[lab_name][day] for s in bloco):
+                                    continue
+                                teacher = get_available_teacher(day, bloco)
+                                if teacher or not requires_lab:
+                                    allocate_block(cls, day, bloco, f"{discipline_name} - D{division['division_number']}", teacher, is_lab=True, lab_name=lab_name)
+                                    for s in bloco:
+                                        lab_schedule[lab_name][day].add(s)
+                        else:
+                            teacher = get_available_teacher(day, bloco)
+                            if teacher or not requires_lab:
+                                allocate_block(cls, day, bloco, discipline_name, teacher)
 
         conn.close()
-        
-        # Verificação final
+
         undefined_teachers = sum(1 for cls in timetable_entries for entry in timetable_entries[cls] if entry["PROFESSOR"] == "A definir")
         total_classes = sum(len(entries) for entries in timetable_entries.values())
-        
+
         if undefined_teachers > 0:
             print(f"⚠️ Aviso: {undefined_teachers} de {total_classes} aulas sem professor alocado")
             print("Possíveis soluções:")
             print("1. Verifique a disponibilidade dos professores")
             print("2. Contrate mais professores")
             print("3. Redistribua as disciplinas entre os professores existentes")
-        
+
         return timetable_entries
+
 
     def show_timetable(self):
         for widget in self.scroll_frame.winfo_children():
