@@ -126,13 +126,11 @@ class TimetableGenerator:
                 ]
                 self.model.Add(sum(teacher_day_vars) <= limit)
 
-        # --- Restrição: evitar que disciplinas compartilhem o mesmo laboratório ao mesmo tempo ---
-        # (Exemplo simples, se quiser posso expandir para caso com `get_available_lab`)
         discipline_day_block = defaultdict(list)
         for var, discipline, _, day, block_index in self.variables:
             discipline_day_block[(day, block_index)].append(var)
         for key, vars_list in discipline_day_block.items():
-            self.model.Add(sum(vars_list) <= len(self.classes))  # máximo 1 por turma por bloco
+            self.model.Add(sum(vars_list) <= len(self.classes))  
 
 
         status = self.solver.Solve(self.model)
