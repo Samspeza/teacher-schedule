@@ -639,6 +639,7 @@ class TimetableApp:
             messagebox.showinfo("Sucesso", f"Divisões alocadas com sucesso nos laboratórios: {', '.join(unique_labs)}.")
         self.load_lab_config_data()
 
+#refazer modelo de geração de grade, grande parte será dando entrada de valores para a automatização
     def generate_timetable(self):
         conn = sqlite3.connect(self.DB_NAME)
         cursor = conn.cursor()
