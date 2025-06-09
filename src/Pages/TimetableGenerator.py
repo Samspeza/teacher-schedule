@@ -48,11 +48,11 @@ class TimetableGenerator:
 
             periods_needed = []
             if required_hours == 1.5:
-                periods_needed = [1, 0.5]  # Um bloco inteiro (3h) e meio bloco (1h)
+                periods_needed = [1, 0.5] 
             elif required_hours == 3:
-                periods_needed = [1, 1]  # Dois blocos inteiros (2x3h)
+                periods_needed = [1, 1] 
             else:
-                periods_needed = [0.5, 0.5, 0.5]  # Exemplo para 1.5h com blocos menores
+                periods_needed = [0.5, 0.5, 0.5] 
 
             for day in self.days:
                 for start_block_index in range(len(self.time_blocks)):
@@ -60,12 +60,10 @@ class TimetableGenerator:
                         var = self.model.NewBoolVar(f'd_{discipline_id}_t_{teacher_id}_d_{day}_b_{start_block_index}')
                         self.variables.append((var, discipline, teacher_id, day, start_block_index))
 
-        # Exemplo de restrição: respeitar disponibilidade dos professores
         for var, discipline, teacher_id, day, block_index in self.variables:
             if not self.availability.get((teacher_id, day, block_index), False):
                 self.model.Add(var == 0)
 
-                # --- Restrição: garantir que cada disciplina seja alocada na carga horária total ---
         from collections import defaultdict
 
         discipline_allocation = defaultdict(list)
@@ -77,13 +75,10 @@ class TimetableGenerator:
             discipline_id = discipline['id']
             required_hours = float(discipline['weekly_hours'])
 
-            # Cada bloco tem 1h (ex: 19-20, 20-21, 21-22)
             blocks_required = int(required_hours)
 
-            # Garante alocação de tempo total da disciplina
             self.model.Add(sum(discipline_allocation[discipline_id]) >= blocks_required)
 
-        # --- Restrição: um professor não pode estar em dois lugares no mesmo horário ---
         for teacher_id in self.teachers:
             for day in self.days:
                 for block_index in range(len(self.time_blocks)):
@@ -93,14 +88,12 @@ class TimetableGenerator:
                     ]
                     self.model.Add(sum(overlapping_vars) <= 1)
 
-        # --- Restrição: blocos contínuos para disciplinas de 3h ---
-        # Se uma disciplina tem 3h semanais, ela pode usar um único professor em blocos contínuos
         for discipline in self.disciplines:
             if float(discipline['weekly_hours']) == 3:
                 discipline_id = discipline['id']
                 for teacher_id in self.teachers:
                     for day in self.days:
-                        for b in range(len(self.time_blocks) - 2):  # precisa de 3 blocos seguidos
+                        for b in range(len(self.time_blocks) - 2): 
                             block_vars = []
                             for i in range(3):
                                 for var, d, t_id, d_day, b_index in self.variables:
