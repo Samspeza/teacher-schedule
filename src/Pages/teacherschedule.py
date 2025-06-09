@@ -639,6 +639,7 @@ class TimetableApp:
             messagebox.showinfo("Sucesso", f"Divisões alocadas com sucesso nos laboratórios: {', '.join(unique_labs)}.")
         self.load_lab_config_data()
 
+#refazer modelo de geração de grade, grande parte será dando entrada de valores para a automatização
     def generate_timetable(self):
         conn = sqlite3.connect(self.DB_NAME)
         cursor = conn.cursor()
@@ -846,7 +847,7 @@ class TimetableApp:
         headers = ["DIA", "INÍCIO", "TÉRMINO", "CÓDIGO", "NOME", "TURMA LAB", "PROFESSOR", "TEÓRICA", "PRÁTICA", "ENCONTRO"]
 
         for col in range(len(headers)):
-            class_frame.grid_columnconfigure(col, weight=1)  # Responsivo
+            class_frame.grid_columnconfigure(col, weight=1) 
 
         for col, header in enumerate(headers):
             label = tk.Label(
@@ -906,7 +907,7 @@ class TimetableApp:
                         anchor="nw",
                         justify="left",
                         bg=bg_color,
-                        wraplength=150  # Ajustável conforme o design
+                        wraplength=150 
                     )
                     label.grid(row=row + k, column=col_idx, sticky="nsew")
 
