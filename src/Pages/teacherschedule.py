@@ -632,8 +632,7 @@ class TimetableApp:
 
         conn.commit()
         conn.close()
-
-        # Mensagem única
+        
         if allocated_labs:
             unique_labs = sorted(set(allocated_labs))
             messagebox.showinfo("Sucesso", f"Divisões alocadas com sucesso nos laboratórios: {', '.join(unique_labs)}.")
