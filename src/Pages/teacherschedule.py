@@ -519,8 +519,6 @@ class TimetableApp:
             selected_lab_name = lab['name']
             self.save_lab_division_config(class_name, discipline_name, division_count, selected_lab_name)
 
-        print(f"✔️ Divisões alocadas com sucesso nos laboratórios.")
-
     def load_lab_config_data(self):
         """Load all classes and disciplines that need lab allocation"""
         conn = sqlite3.connect(self.DB_NAME)
@@ -632,8 +630,7 @@ class TimetableApp:
 
         conn.commit()
         conn.close()
-
-        # Mensagem única
+        
         if allocated_labs:
             unique_labs = sorted(set(allocated_labs))
             messagebox.showinfo("Sucesso", f"Divisões alocadas com sucesso nos laboratórios: {', '.join(unique_labs)}.")
@@ -974,7 +971,6 @@ class TimetableApp:
                 grade_content += row + "\n"
             grade_content += "\n" + "=" * 30 + "\n"
 
-            # Exporta para Excel
             if export_excel:
                 excel_path = os.path.join(dir_path, f"{grade_name}.xlsx")
                 wb = openpyxl.Workbook()
@@ -992,7 +988,6 @@ class TimetableApp:
                 wb.save(excel_path)
                 print(f"✅ Excel salvo: {excel_path}")
 
-            # Exporta para PDF
             if export_pdf:
                 pdf_path = os.path.join(dir_path, f"{grade_name}.pdf")
                 c = canvas.Canvas(pdf_path, pagesize=A4)
@@ -1012,7 +1007,6 @@ class TimetableApp:
                 c.save()
                 print(f"📄 PDF salvo: {pdf_path}")
 
-            # Salva no banco
             conn = sqlite3.connect(self.DB_NAME)
             cursor = conn.cursor()
             cursor.execute("""
